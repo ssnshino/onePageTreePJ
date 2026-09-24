@@ -1,5 +1,20 @@
 const isMobile = matchMedia('(max-width: 700px)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
+const appRoot=document.getElementById('app');
 const stage=document.getElementById('stage');
+const inspector=document.getElementById('inspector');
+const inspectorTab=document.getElementById('inspectorTab');
+const collapseInspectorBtn=document.getElementById('collapseInspector');
+const uiWake=document.getElementById('uiWake');
+const sheetHandle=document.getElementById('sheetHandle');
+const statsPanel=document.getElementById('statsPanel');
+const toast=document.getElementById('toast');
+
+const STORAGE={
+  values:'oldOakTreeLab.values.v2',
+  ui:'oldOakTreeLab.ui.v2',
+  preset:'oldOakTreeLab.savedPreset.v2'
+};
+
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobile?1.35:1.8));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -70,9 +85,93 @@ let silhouette=false;
 let wire=false;
 let leavesVisible=true;
 let rootsVisible=true;
+let inspectorCollapsed=isMobile;
+let uiHidden=false;
+let currentView='three';
+let toastTimer=0;
 
 const ids=['seed','height','radius','flare','collar','branches','angle','gnarl1','gnarl2','upPull','leafCount','leafSize'];
 const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
+const defaultValues=Object.fromEntries(ids.map(id=>[id,el[id].value]));
+const accordionEls=[...document.querySelectorAll('.accordion')];
+const viewButtons=[...document.querySelectorAll('[data-view]')];
+
+function safeParse(value,fallback=null){
+  try{return JSON.parse(value)}catch{return fallback}
+}
+function readStored(key){
+  try{return localStorage.getItem(key)}catch{return null}
+}
+function writeStored(key,value){
+  try{localStorage.setItem(key,value);return true}catch{return false}
+}
+function removeStored(key){
+  try{localStorage.removeItem(key)}catch{}
+}
+function showToast(message){
+  toast.textContent=message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toast.classList.remove('show'),1300);
+}
+function getValueState(){
+  return Object.fromEntries(ids.map(id=>[id,el[id].value]));
+}
+function applyValueState(values,{rebuildNow=true,persist=true}={}){
+  if(!values)return;
+  for(const id of ids){
+    if(values[id]!==undefined && values[id]!==null)el[id].value=values[id];
+  }
+  syncLabels();
+  if(persist)writeStored(STORAGE.values,JSON.stringify(getValueState()));
+  if(rebuildNow)rebuild();
+}
+function persistValues(){
+  writeStored(STORAGE.values,JSON.stringify(getValueState()));
+}
+function getUIState(){
+  return {
+    inspectorCollapsed,
+    currentView,
+    statsOpen:statsPanel.open,
+    sections:Object.fromEntries(accordionEls.map(d=>[d.dataset.section,d.open]))
+  };
+}
+function persistUI(){
+  writeStored(STORAGE.ui,JSON.stringify(getUIState()));
+}
+function setInspectorCollapsed(value,{persist=true}={}){
+  inspectorCollapsed=!!value;
+  appRoot.classList.toggle('inspector-collapsed',inspectorCollapsed);
+  collapseInspectorBtn.setAttribute('aria-expanded',String(!inspectorCollapsed));
+  collapseInspectorBtn.setAttribute('aria-label',inspectorCollapsed?'Inspectorを表示':'Inspectorを隠す');
+  collapseInspectorBtn.textContent=isMobile?'⌄':'‹';
+  if(persist)persistUI();
+}
+function setUIHidden(value){
+  uiHidden=!!value;
+  appRoot.classList.toggle('ui-hidden',uiHidden);
+  uiWake.setAttribute('aria-hidden',String(!uiHidden));
+}
+function restoreState(){
+  const values=safeParse(readStored(STORAGE.values));
+  if(values)applyValueState(values,{rebuildNow:false,persist:false});
+
+  const state=safeParse(readStored(STORAGE.ui));
+  if(state){
+    inspectorCollapsed=Boolean(state.inspectorCollapsed);
+    currentView=state.currentView||'three';
+    statsPanel.open=Boolean(state.statsOpen);
+    if(state.sections){
+      for(const d of accordionEls){
+        if(d.dataset.section in state.sections)d.open=Boolean(state.sections[d.dataset.section]);
+      }
+    }
+  }else{
+    inspectorCollapsed=isMobile;
+  }
+  setInspectorCollapsed(inspectorCollapsed,{persist:false});
+}
 
 function cloneSpec(){
   return JSON.parse(JSON.stringify(OLD_OAK_SPEC));
@@ -106,11 +205,14 @@ function disposeObject(obj){
     if(o.geometry)o.geometry.dispose();
     if(o.material){
       const mats=Array.isArray(o.material)?o.material:[o.material];
-      for(const m of mats){if(m.map)m.map.dispose();if(m.alphaMap)m.alphaMap.dispose();m.dispose()}
+      for(const m of mats){
+        if(m.map && m.map!==barkMap)m.map.dispose();
+        if(m.alphaMap)m.alphaMap.dispose();
+        m.dispose();
+      }
     }
   });
 }
-
 function makeBarkMaterial(){
   return new THREE.MeshStandardMaterial({map:barkMap,color:0xd9c9ad,roughness:.97,metalness:0});
 }
@@ -135,10 +237,10 @@ function applyMode(){
     leafMesh.material.wireframe=wire;
     leafMesh.material.color.set(silhouette?0x090909:0xffffff);
   }
-  document.getElementById('silhouette').classList.toggle('on',silhouette);
-  document.getElementById('wire').classList.toggle('on',wire);
-  document.getElementById('leaves').classList.toggle('on',!leavesVisible);
-  document.getElementById('roots').classList.toggle('on',!rootsVisible);
+  document.getElementById('silhouette').setAttribute('aria-pressed',String(silhouette));
+  document.getElementById('wire').setAttribute('aria-pressed',String(wire));
+  document.getElementById('leaves').setAttribute('aria-pressed',String(leavesVisible));
+  document.getElementById('roots').setAttribute('aria-pressed',String(rootsVisible));
 }
 
 function rebuild(){
@@ -175,7 +277,6 @@ function rebuild(){
   applyMode();
   updateStaticStats();
 }
-
 function updateStaticStats(){
   const s=treeGroup?.userData.stats;
   if(!s)return;
@@ -187,12 +288,14 @@ let rebuildTimer=0;
 for(const id of ids){
   el[id].addEventListener('input',()=>{
     syncLabels();
+    persistValues();
     clearTimeout(rebuildTimer);
     rebuildTimer=setTimeout(rebuild,90);
   });
 }
 
-function setView(name){
+function setView(name,{persist=true}={}){
+  currentView=name;
   const h=currentSpec?.trunkLength||12.5;
   const target=new THREE.Vector3(0,h*.45,0);
   if(name==='front')camera.position.set(0,h*.45,20);
@@ -201,27 +304,99 @@ function setView(name){
   if(name==='three')camera.position.set(15,h*.58,15);
   controls.target.copy(target);
   controls.update();
+
+  for(const b of viewButtons)b.setAttribute('aria-pressed',String(b.dataset.view===name));
+  if(persist)persistUI();
 }
-document.getElementById('front').onclick=()=>setView('front');
-document.getElementById('side').onclick=()=>setView('side');
-document.getElementById('top').onclick=()=>setView('top');
-document.getElementById('three').onclick=()=>setView('three');
-document.getElementById('random').onclick=()=>{el.seed.value=1+Math.floor(Math.random()*999);syncLabels();rebuild()};
-document.getElementById('silhouette').onclick=()=>{silhouette=!silhouette;applyMode()};
-document.getElementById('wire').onclick=()=>{wire=!wire;applyMode()};
-document.getElementById('leaves').onclick=()=>{leavesVisible=!leavesVisible;applyMode()};
-document.getElementById('roots').onclick=()=>{rootsVisible=!rootsVisible;applyMode()};
+for(const b of viewButtons)b.addEventListener('click',()=>setView(b.dataset.view));
+
+document.getElementById('silhouette').addEventListener('click',()=>{silhouette=!silhouette;applyMode()});
+document.getElementById('wire').addEventListener('click',()=>{wire=!wire;applyMode()});
+document.getElementById('leaves').addEventListener('click',()=>{leavesVisible=!leavesVisible;applyMode()});
+document.getElementById('roots').addEventListener('click',()=>{rootsVisible=!rootsVisible;applyMode()});
+
+document.getElementById('random').addEventListener('click',()=>{
+  el.seed.value=1+Math.floor(Math.random()*999);
+  syncLabels();persistValues();rebuild();
+  showToast('New seed');
+});
+document.getElementById('reset').addEventListener('click',()=>{
+  removeStored(STORAGE.values);
+  applyValueState(defaultValues,{rebuildNow:true,persist:false});
+  showToast('Defaults restored');
+});
+document.getElementById('savePreset').addEventListener('click',()=>{
+  writeStored(STORAGE.preset,JSON.stringify(getValueState()));
+  showToast('Preset saved');
+});
+document.getElementById('loadPreset').addEventListener('click',()=>{
+  const saved=safeParse(readStored(STORAGE.preset));
+  if(!saved){showToast('No saved preset');return}
+  applyValueState(saved);
+  showToast('Preset loaded');
+});
+document.getElementById('copyPreset').addEventListener('click',async()=>{
+  const payload=JSON.stringify({
+    type:'OLD_OAK_TREE_LAB_PRESET',
+    version:2,
+    values:getValueState()
+  },null,2);
+  try{
+    await navigator.clipboard.writeText(payload);
+    showToast('Preset JSON copied');
+  }catch{
+    const ta=document.createElement('textarea');
+    ta.value=payload;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');ta.remove();
+    showToast('Preset JSON copied');
+  }
+});
+
+collapseInspectorBtn.addEventListener('click',()=>setInspectorCollapsed(true));
+inspectorTab.addEventListener('click',()=>setInspectorCollapsed(false));
+uiWake.addEventListener('click',()=>setUIHidden(false));
+for(const d of accordionEls)d.addEventListener('toggle',persistUI);
+statsPanel.addEventListener('toggle',persistUI);
+
+let dragStartY=null;
+sheetHandle.addEventListener('pointerdown',e=>{
+  dragStartY=e.clientY;
+  sheetHandle.setPointerCapture?.(e.pointerId);
+});
+sheetHandle.addEventListener('pointerup',e=>{
+  if(dragStartY!==null && e.clientY-dragStartY>44)setInspectorCollapsed(true);
+  dragStartY=null;
+});
+
+document.addEventListener('keydown',e=>{
+  const tag=e.target?.tagName?.toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select')return;
+  const k=e.key.toLowerCase();
+  if(k==='i'){setInspectorCollapsed(!inspectorCollapsed);e.preventDefault()}
+  else if(k==='h'){setUIHidden(!uiHidden);e.preventDefault()}
+  else if(k==='w'){wire=!wire;applyMode();e.preventDefault()}
+  else if(k==='s'){silhouette=!silhouette;applyMode();e.preventDefault()}
+  else if(k==='1')setView('three');
+  else if(k==='2')setView('front');
+  else if(k==='3')setView('side');
+  else if(k==='4')setView('top');
+});
 
 function resize(){
   const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);
   renderer.setSize(w,h,false);
   camera.aspect=w/h;camera.updateProjectionMatrix();
 }
-new ResizeObserver(resize).observe(stage);resize();
+new ResizeObserver(resize).observe(stage);
+resize();
 
-syncLabels();rebuild();setView('three');
+syncLabels();
+restoreState();
+rebuild();
+setView(currentView,{persist:false});
 
-let last=performance.now(),frames=0,fpsLast=last;
+let frames=0,fpsLast=performance.now();
 renderer.setAnimationLoop(now=>{
   controls.update();
   renderer.render(scene,camera);

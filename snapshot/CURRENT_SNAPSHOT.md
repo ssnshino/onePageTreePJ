@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-24T14:01:00+09:00
+Updated: 2026-09-24T14:36:00+09:00
 
 ## Repository State
 
@@ -116,3 +116,20 @@ Important: the previous r160 local-safe Hero Tree candidate already booted succe
 - silhouette / wireframe / roots / foliage review modes
 - GitHub Actions run `35958048878`: **PASS**
 - Human tuning review: PENDING
+
+## Active Candidate — TREE LAB UI v2
+
+- Branch: `feature/tree-lab-ui-v2`
+- Draft PR: `#7`
+- Base: `feature/tree-lab-old-oak-tuning`
+- Output: `dist/tree-lab-old-oak.html`
+- Desktop: floating Inspector → edge restore tab
+- Mobile: bottom sheet → bottom restore pill
+- Native disclosure groups
+- segmented fixed-view control
+- display toggles separated from actions
+- localStorage state persistence
+- Save / Load / Copy JSON preset tools
+- keyboard shortcuts: I / H / 1–4 / W / S
+- GitHub Actions run `35960630079`: **PASS**
+- Human UI review: PENDING
