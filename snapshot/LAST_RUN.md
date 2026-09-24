@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-24T14:01:00+09:00
+Updated: 2026-09-24T14:36:00+09:00
 
 ## Session Summary
 
@@ -162,3 +162,28 @@ CI:
 
 Next:
 Human parameter tuning in `tree-lab-old-oak.html`.
+
+## Current Run — TREE LAB UI v2
+
+TREE LAB was redesigned around an Inspector/viewport model after reviewing Apple HIG, Blender Sidebar behavior, and Tweakpane tuning patterns.
+
+Implemented:
+- viewport-first floating Inspector
+- collapse to persistent restore affordance
+- responsive mobile bottom sheet
+- accordion parameter groups
+- segmented camera views
+- separate display toggles
+- preset Reset / Random / Save / Load / Copy JSON
+- automatic localStorage state
+- keyboard shortcuts
+- compact performance disclosure
+- full-UI hide with restore button
+
+CI:
+- initial false failure was caused only by the old verifier title marker
+- verifier updated
+- final run `35960630079`: PASS
+
+Next:
+Human review of the new Inspector while actively tuning the OLD OAK.
