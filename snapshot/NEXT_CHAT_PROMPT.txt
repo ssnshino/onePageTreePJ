@@ -1,40 +1,308 @@
 このチャットを「Three.js 一枚ペラ写実3D研究室」として運用する。
 
+# PROJECT
+
 Repository:
 ssnshino/onePageTreePJ
 
-最初に読む:
+Default branch:
+main
+
+このRepositoryをこのプロジェクトの正本として扱う。
+
+# STARTUP — 最初に読む
+
+以下を順番に確認する。
+
 1. README.md
 2. AGENTS.md
 3. snapshot/CURRENT_SNAPSHOT.md
 4. snapshot/LAST_RUN.md
 5. plan/head/ONE_PAGE_TREE_v0.6_NATURAL_ASSET_QUALITY_PLAN.md
 6. docs/head/ONE_PAGE_TREE_CURRENT_SPEC_v0.5.md
+7. research/trees-rocks/README.md
+8. 必要になった場合のみ research/water/README.md
 
-Current baseline:
+通常の作業開始時に history/ 全体を走査しない。
+
+# CURRENT BASELINE
+
+Current HTML:
 threejs_onepage_waterworld_v0.5_trees_rocks.html
 
-目的:
-Three.js / WebGLを使い、一枚HTMLで実写に近いヴァーチャル3D空間を極める。
+Historical samples:
+samples/v0.1/
+samples/v0.2/
+samples/v0.3/
+samples/v0.4/
+samples/v0.5/
 
-現在の評価:
-- 水: 及第点
-- 山: 及第点
-- 木: 大きな減点要素
-- 岩: 大きな減点要素
+v0.1〜v0.5は比較・regression確認用として保持する。
 
-最優先:
-v0.6 NATURAL ASSET QUALITY。
-水を無意味に作り直さず、木と岩へ集中する。
+# PROJECT GOAL
 
-開発フロー:
-PLAN → IMPLEMENT → TEST → WORKLOG → SPEC → SNAPSHOT
+Three.js / WebGL を使い、
 
-重要:
-- 実際の画面の説得力を技術の高度さより優先
-- 一番偽物に見える要素から直す
-- PC / smartphone両対応
-- 一枚HTMLを維持
-- Human実機録画を最終品質gateとする
-- mainへ直接pushせずPR-first
-- 最終mergeはHuman authority
+「一枚HTMLで、実写映像に近いヴァーチャル3D自然空間をどこまで構築できるか」
+
+を本気で研究する。
+
+単なるThree.jsデモではなく、
+
+- 景観として眺めて成立する
+- 自由にカメラで探索できる
+- 水・空・地形・岩・木・霧・光が同じ世界として馴染む
+- PC / smartphoneの両方で動かせる
+- 最終的には「ブラウザ内の小さなヴァーチャル世界」と呼べる
+
+レベルを目指す。
+
+一枚HTMLという制約を理由に品質を妥協しない。
+
+# CURRENT VISUAL VERDICT
+
+Human実機録画による現時点の評価:
+
+## 及第点
+- 水
+- 山
+- 空 / 霧 / 大気感
+- 3D空間としてのカメラ感
+- planar reflectionによる景観への統合
+
+## 現在の最大減点要素
+- 木
+- 岩
+
+重要な発見:
+
+「水だけリアルでも、木が図形、岩がジャガイモに見えた瞬間に画面全体がCGへ戻る」
+
+したがって、
+
+「一番品質の低い可視要素が、画面全体の品質上限を決める」
+
+を今後の重要原則とする。
+
+# NEXT MILESTONE
+
+v0.6 — NATURAL ASSET QUALITY
+
+最優先は木と岩。
+
+水・山を無意味に作り直さない。
+
+## TREE TARGET
+
+- natural silhouette
+- branch hierarchy
+- branch taper
+- curved / irregular branching
+- crown breakup
+- foliage cards
+- alpha-cutout foliage
+- leaf cluster quality
+- bark texture / normal / roughness
+- individual variation
+- near / mid / far LOD
+- distance billboardの可能性
+- wind sway
+- realistic forest distribution
+
+特に「幹＋円錐」「幹＋球」の記号表現から完全に離れる。
+
+## ROCK TARGET
+
+- non-spherical base topology
+- geological fracture planes
+- layered displacement
+- erosion
+- stratification
+- roughness variation
+- normal / bump detail
+- moss
+- lichen
+- wet shoreline rock
+- boulder / loose stone / outcrop distinction
+- cluster placement
+- terrainへの埋まり方
+
+単なるrandom vertex noiseだけではなく、
+
+「自然界でなぜその岩がその形になったのか」
+
+を少し意識する。
+
+# RESEARCH POLICY
+
+新しい写実表現を実装する前に、必要に応じてWebを検索する。
+
+優先:
+- Three.js official docs
+- Three.js official examples
+- Three.js forum
+- GitHub implementations
+- graphics programming literature
+- vegetation rendering
+- procedural tree generation
+- geological rock generation
+- PBR / LOD / instancing techniques
+
+既存の確立手法を調べ、それを一枚HTML向けに軽量化して採用する。
+
+思いつきだけで複雑化しない。
+
+# ASSET POLICY
+
+現段階では procedural / generated asset を優先する。
+
+ただし最終目的は純proceduralコンテストではなく「写実ヴァーチャル空間」。
+
+明確に品質向上へ効くなら、
+
+- PBR texture
+- alpha foliage texture
+- glTF
+- HDRI
+- external runtime asset
+
+も研究対象としてよい。
+
+proceduralだけでは越えにくい壁が見えた場合は、外部アセット利用案と比較検証する。
+
+# PERFORMANCE POLICY
+
+写実化してもsmartphone対応を捨てない。
+
+積極利用:
+- InstancedMesh
+- merged geometry
+- LOD
+- frustum culling
+- distance culling
+- cached procedural geometry
+- devicePixelRatio limit
+- reflection resolution switching
+- PC / mobile quality preset
+
+詳細Meshを力技で数百個置くだけの方法は避ける。
+
+# DEVELOPMENT FLOW
+
+PLAN
+↓
+RESEARCH
+↓
+IMPLEMENT
+↓
+STATIC TEST
+↓
+BROWSER TEST
+↓
+HUMAN REAL-DEVICE VIDEO / SCREENSHOT
+↓
+WORKLOG
+↓
+SPEC
+↓
+SNAPSHOT
+↓
+PR
+↓
+HUMAN REVIEW
+↓
+main merge
+
+# GIT RULES
+
+- mainはHuman Review済み安定正本
+- AIは原則mainへ直接pushしない
+- purpose-specific branchを作る
+- 1 PR = 1 logical commitを原則とする
+- Humanの明示依頼なしにAIはmergeしない
+- Current HTMLを直接破壊せず新versionを作る
+- v0.5はrollback / visual comparison用に維持する
+
+# NO REGRESSION
+
+木・岩の改善時にも以下を維持する。
+
+- current Water / planar reflection
+- clear lake / lakebed
+- Sky / PMREM
+- ACES Filmic tone mapping
+- mountains
+- fog / atmosphere
+- OrbitControls
+- smartphone fallback
+- one-page HTML execution
+
+既に良い部分を「実装が楽になる」という理由で削除・縮小しない。
+
+# QUALITY JUDGEMENT
+
+コードの美しさではなく画面で判断する。
+
+以下は成功条件ではない:
+- polygon countが増えた
+- shaderが複雑になった
+- procedural生成を使った
+- PBRを使った
+
+成功条件は、
+
+「普通に見たとき、木と岩が景色の中で浮かず、自然物として見えること」
+
+Humanの実機動画で違和感が出た場合、automatic QAよりその違和感を優先する。
+
+# LONG-TERM DIRECTION
+
+一画面の湖デモを完成地点とはしない。
+
+将来的には、
+
+森
+↓
+湖
+↓
+岩場
+↓
+小川
+↓
+山道
+↓
+滝
+↓
+洞窟
+↓
+昼夜
+↓
+天候
+
+を連続した一つの空間として探索できる、
+
+「実写のようなヴァーチャル自然世界」
+
+へ発展可能。
+
+ただし今は機能追加より、
+
+「一画面の自然景観を本物っぽくする」
+
+ことを優先する。
+
+# FIRST ACTION IN THIS CHAT
+
+Repositoryを読んだあと、まず v0.5 の現状と v0.6 PLAN を確認する。
+
+その上で、
+木と岩を実写寄りへ引き上げるための手法をWeb調査し、
+候補を比較してから v0.6 実装計画を具体化する。
+
+合言葉:
+
+水だけリアルでもダメ。
+木一本、岩一個まで世界の一部にする。
+一枚HTMLだからこそ、本気でやる。
+
+Three.js極道。
