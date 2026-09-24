@@ -96,6 +96,9 @@ const defaultValues=Object.fromEntries(ids.map(id=>[id,el[id].value]));
 const accordionEls=[...document.querySelectorAll('.accordion')];
 const viewButtons=[...document.querySelectorAll('[data-view]')];
 const morphologyPresetEl=document.getElementById('morphologyPreset');
+const modelSpreadRatioEl=document.getElementById('modelSpreadRatio');
+const modelTrunkRatioEl=document.getElementById('modelTrunkRatio');
+const bedfordMatchViewBtn=document.getElementById('bedfordMatchView');
 
 const MORPHOLOGY_PRESETS={
   current:{...defaultValues},
@@ -117,6 +120,26 @@ const MORPHOLOGY_PRESETS={
     upPull:'0.14',
     leafCount:'11',
     leafSize:'0.44'
+  },
+  // Bedford Oak 2022 photo-match candidate.
+  // Real-tree ratios from the Wikimedia photo metadata:
+  // height 69 ft, spread >120 ft, circumference 21'3" at 4.5 ft.
+  // Numeric generator values remain an experimental mapping, not surveyed geometry.
+  'bedford-2022':{
+    seed:'187',
+    height:'10.50',
+    radius:'0.52',
+    trunkClear:'0.10',
+    flare:'1.18',
+    collar:'0.34',
+    branches:'10',
+    angle:'81',
+    crownSpread:'0.80',
+    gnarl1:'0.135',
+    gnarl2:'0.240',
+    upPull:'0.16',
+    leafCount:'12',
+    leafSize:'0.42'
   }
 };
 
@@ -232,6 +255,7 @@ function syncMorphologyPreset(){
   const values=getValueState();
   if(valuesEqualPreset(values,MORPHOLOGY_PRESETS.current))morphologyPresetEl.value='current';
   else if(valuesEqualPreset(values,MORPHOLOGY_PRESETS['open-grown']))morphologyPresetEl.value='open-grown';
+  else if(valuesEqualPreset(values,MORPHOLOGY_PRESETS['bedford-2022']))morphologyPresetEl.value='bedford-2022';
   else morphologyPresetEl.value='custom';
 }
 function applyMorphologyPreset(name){
@@ -239,7 +263,12 @@ function applyMorphologyPreset(name){
   if(!preset)return;
   applyValueState(preset,{rebuildNow:true,persist:true});
   morphologyPresetEl.value=name;
-  showToast(name==='open-grown'?'Open-grown oak applied':'Current baseline applied');
+  const messages={
+    current:'Current baseline applied',
+    'open-grown':'Open-grown oak applied',
+    'bedford-2022':'Bedford Oak photo-match applied'
+  };
+  showToast(messages[name]||'Morphology applied');
 }
 
 function disposeObject(obj){
@@ -316,14 +345,31 @@ function rebuild(){
     woodTri:woodGeometry.index.count/3,
     rootTri:rootGeometry.index.count/3
   };
+  leafMesh.computeBoundingBox?.();
+  treeGroup.updateMatrixWorld(true);
   applyMode();
   updateStaticStats();
+  updateReferenceMetrics();
 }
 function updateStaticStats(){
   const s=treeGroup?.userData.stats;
   if(!s)return;
   document.getElementById('treeStats').textContent=
     `STEMS ${s.stems} · TWIGS ${s.twigs} · LEAVES ${s.leaves} · TREE TRI ${Math.round(s.woodTri+s.rootTri).toLocaleString()} · BUILD ${lastBuildMs.toFixed(1)}ms`;
+}
+function updateReferenceMetrics(){
+  if(!treeGroup||!currentSpec)return;
+  treeGroup.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(treeGroup,true);
+  const size=box.getSize(new THREE.Vector3());
+  const spread=Math.max(size.x,size.z);
+  const height=Math.max(.001,size.y);
+  const spreadRatio=spread/height;
+  const trunkRatio=(currentSpec.trunkRadius*2)/Math.max(.001,currentSpec.trunkLength);
+  modelSpreadRatioEl.textContent=spreadRatio.toFixed(2);
+  modelTrunkRatioEl.textContent=trunkRatio.toFixed(3);
+  modelSpreadRatioEl.classList.toggle('near-target',spreadRatio>=1.64&&spreadRatio<=1.92);
+  modelTrunkRatioEl.classList.toggle('near-target',Math.abs(trunkRatio-.098)<=.018);
 }
 
 let rebuildTimer=0;
@@ -357,6 +403,12 @@ document.getElementById('silhouette').addEventListener('click',()=>{silhouette=!
 document.getElementById('wire').addEventListener('click',()=>{wire=!wire;applyMode()});
 document.getElementById('leaves').addEventListener('click',()=>{leavesVisible=!leavesVisible;applyMode()});
 document.getElementById('roots').addEventListener('click',()=>{rootsVisible=!rootsVisible;applyMode()});
+
+bedfordMatchViewBtn.addEventListener('click',()=>{
+  setView('front');
+  if(!silhouette){silhouette=true;applyMode()}
+  showToast('Bedford silhouette check');
+});
 
 morphologyPresetEl.addEventListener('change',()=>{
   if(morphologyPresetEl.value==='custom')return;

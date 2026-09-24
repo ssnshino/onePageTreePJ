@@ -40,9 +40,29 @@
         <select id="morphologyPreset" class="preset-select" aria-label="形態プリセット">
           <option value="current">CURRENT v0.6</option>
           <option value="open-grown">OPEN-GROWN WHITE OAK</option>
+          <option value="bedford-2022">BEDFORD OAK 2022 — PHOTO MATCH</option>
           <option value="custom">CUSTOM</option>
         </select>
         <div class="research-note">Research target: short stocky bole · wide horizontal crown · dense rounded canopy.</div>
+      </section>
+
+      <section id="referencePanel" class="tool-block reference-block" aria-labelledby="referenceLabel">
+        <div class="reference-head">
+          <div>
+            <div id="referenceLabel" class="block-label">REAL TREE REFERENCE</div>
+            <strong>Bedford Oak · Quercus alba</strong>
+          </div>
+          <a class="reference-link" href="https://commons.wikimedia.org/wiki/File:Bedford_Oak,_October_2022.jpg" target="_blank" rel="noopener">PHOTO ↗</a>
+        </div>
+        <div class="reference-facts">2022 photo: H 69 ft · spread &gt;120 ft · circumference 21' 3" @ 4.5 ft</div>
+        <div class="ratio-grid">
+          <div><span>TARGET SPREAD / H</span><b>≥ 1.74</b></div>
+          <div><span>MODEL SPREAD / H</span><b id="modelSpreadRatio">--</b></div>
+          <div><span>TARGET TRUNK D / H</span><b>≈ 0.098</b></div>
+          <div><span>MODEL TRUNK D / H</span><b id="modelTrunkRatio">--</b></div>
+        </div>
+        <button id="bedfordMatchView" class="reference-action" type="button">FRONT + SILHOUETTE CHECK</button>
+        <div class="reference-credit">Photo: Marty Aligata, 2022 · CC BY-SA 4.0 · Wikimedia Commons</div>
       </section>
 
       <details class="accordion" data-section="tree" open>
@@ -59,7 +79,7 @@
         <div class="section-body">
           <div class="ctrl"><label><span>PRIMARY COUNT</span><b data-value="branches">7</b></label><input id="branches" type="range" min="3" max="14" step="1" value="7"></div>
           <div class="ctrl"><label><span>PRIMARY ANGLE</span><b data-value="angle">68</b></label><input id="angle" type="range" min="40" max="88" step="1" value="68"></div>
-          <div class="ctrl"><label><span>CROWN SPREAD</span><b data-value="crownSpread">0.52</b></label><input id="crownSpread" type="range" min="0.42" max="0.72" step="0.01" value="0.52"></div>
+          <div class="ctrl"><label><span>CROWN SPREAD</span><b data-value="crownSpread">0.52</b></label><input id="crownSpread" type="range" min="0.42" max="0.88" step="0.01" value="0.52"></div>
           <div class="ctrl"><label><span>L1 GNARL</span><b data-value="gnarl1">0.095</b></label><input id="gnarl1" type="range" min="0.01" max="0.24" step="0.005" value="0.095"></div>
           <div class="ctrl"><label><span>L2 GNARL</span><b data-value="gnarl2">0.18</b></label><input id="gnarl2" type="range" min="0.02" max="0.34" step="0.005" value="0.18"></div>
           <div class="ctrl"><label><span>TIP UP-PULL</span><b data-value="upPull">0.12</b></label><input id="upPull" type="range" min="0" max="0.38" step="0.01" value="0.12"></div>
