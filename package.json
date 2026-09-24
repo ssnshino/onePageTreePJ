@@ -9,7 +9,11 @@
   "scripts": {
     "build": "node scripts/build-onepage.mjs --minify",
     "build:debug": "node scripts/build-onepage.mjs",
-    "verify": "node scripts/verify-dist.mjs"
+    "verify": "node scripts/verify-dist.mjs",
+    "build:tree-lab": "node scripts/build-tree-lab.mjs --minify",
+    "build:tree-lab:debug": "node scripts/build-tree-lab.mjs",
+    "build:all": "npm run build && npm run build:tree-lab",
+    "verify:tree-lab": "node scripts/verify-tree-lab.mjs"
   },
   "dependencies": {
     "three": "0.186.0"

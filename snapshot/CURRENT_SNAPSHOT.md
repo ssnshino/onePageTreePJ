@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-24T13:32:00+09:00
+Updated: 2026-09-24T14:01:00+09:00
 
 ## Repository State
 
@@ -103,3 +103,16 @@ Important: the previous r160 local-safe Hero Tree candidate already booted succe
 - Performance HUD expanded to FPS / TRI / CALL / GEO / TEX / DPR / REFLECT
 - GitHub Actions run `35955885981`: **PASS**
 - Human visual review: PENDING
+
+## Active Tuning Tool — OLD OAK TREE LAB
+
+- Branch: `feature/tree-lab-old-oak-tuning`
+- Draft PR: `#6`
+- Output: `dist/tree-lab-old-oak.html`
+- Same OLD OAK generator as main scene
+- branch collar experiment enabled
+- trimmed leaf-card mesh enabled
+- direct morphology controls
+- silhouette / wireframe / roots / foliage review modes
+- GitHub Actions run `35958048878`: **PASS**
+- Human tuning review: PENDING
