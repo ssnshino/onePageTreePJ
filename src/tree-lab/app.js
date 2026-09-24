@@ -83,6 +83,7 @@ let currentSpec=null;
 let lastBuildMs=0;
 let silhouette=false;
 let wire=false;
+let woodVisible=true;
 let leavesVisible=true;
 let rootsVisible=true;
 let inspectorCollapsed=isMobile;
@@ -90,12 +91,15 @@ let uiHidden=false;
 let currentView='three';
 let toastTimer=0;
 
-const ids=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','gnarl1','gnarl2','upPull','leafCount','leafSize'];
+const ids=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','gnarl1','gnarl2','upPull','canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize'];
+const MORPHOLOGY_IDS=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','gnarl1','gnarl2','upPull'];
+const FOLIAGE_IDS=['canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize'];
 const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
 const defaultValues=Object.fromEntries(ids.map(id=>[id,el[id].value]));
 const accordionEls=[...document.querySelectorAll('.accordion')];
 const viewButtons=[...document.querySelectorAll('[data-view]')];
 const morphologyPresetEl=document.getElementById('morphologyPreset');
+const foliagePresetEl=document.getElementById('foliagePreset');
 const modelSpreadRatioEl=document.getElementById('modelSpreadRatio');
 const modelTrunkRatioEl=document.getElementById('modelTrunkRatio');
 const bedfordMatchViewBtn=document.getElementById('bedfordMatchView');
@@ -140,6 +144,25 @@ const MORPHOLOGY_PRESETS={
     upPull:'0.16',
     leafCount:'12',
     leafSize:'0.42'
+  }
+};
+
+const FOLIAGE_PRESETS={
+  current:{
+    canopyDensity:'1.00',innerFill:'0.12',clumpSpan:'0.72',deadBranchFraction:'0.04',
+    lowerCrownFill:'0.55',skyGap:'0.18',leafCount:'9',leafSize:'0.48'
+  },
+  winter:{
+    canopyDensity:'0.48',innerFill:'0.08',clumpSpan:'0.48',deadBranchFraction:'0.24',
+    lowerCrownFill:'0.30',skyGap:'0.40',leafCount:'7',leafSize:'0.42'
+  },
+  summer:{
+    canopyDensity:'1.55',innerFill:'0.56',clumpSpan:'0.78',deadBranchFraction:'0.06',
+    lowerCrownFill:'0.74',skyGap:'0.14',leafCount:'10',leafSize:'0.42'
+  },
+  dense:{
+    canopyDensity:'2.10',innerFill:'0.82',clumpSpan:'0.90',deadBranchFraction:'0.02',
+    lowerCrownFill:'0.92',skyGap:'0.06',leafCount:'11',leafSize:'0.40'
   }
 };
 
@@ -237,6 +260,12 @@ function readSpec(){
   s.gnarl[1]=Number(el.gnarl1.value);
   s.gnarl[2]=Number(el.gnarl2.value);
   s.upPull[2]=Number(el.upPull.value);
+  s.foliage.canopyDensity=Number(el.canopyDensity.value);
+  s.foliage.innerFill=Number(el.innerFill.value);
+  s.foliage.clumpSpan=Number(el.clumpSpan.value);
+  s.foliage.deadBranchFraction=Number(el.deadBranchFraction.value);
+  s.foliage.lowerCrownFill=Number(el.lowerCrownFill.value);
+  s.foliage.skyGap=Number(el.skyGap.value);
   s.foliage.desktopLeavesPerTwig=Math.round(Number(el.leafCount.value));
   s.foliage.mobileLeavesPerTwig=Math.max(2,Math.round(s.foliage.desktopLeavesPerTwig*.58));
   s.foliage.size=Number(el.leafSize.value);
@@ -248,27 +277,53 @@ function syncLabels(){
     if(out)out.textContent=el[id].value;
   }
 }
-function valuesEqualPreset(values,preset){
-  return ids.every(id=>String(values[id])===String(preset[id]));
+function valuesEqualSubset(values,preset,keys){
+  return keys.every(id=>preset[id]!==undefined&&String(values[id])===String(preset[id]));
 }
 function syncMorphologyPreset(){
   const values=getValueState();
-  if(valuesEqualPreset(values,MORPHOLOGY_PRESETS.current))morphologyPresetEl.value='current';
-  else if(valuesEqualPreset(values,MORPHOLOGY_PRESETS['open-grown']))morphologyPresetEl.value='open-grown';
-  else if(valuesEqualPreset(values,MORPHOLOGY_PRESETS['bedford-2022']))morphologyPresetEl.value='bedford-2022';
+  if(valuesEqualSubset(values,MORPHOLOGY_PRESETS.current,MORPHOLOGY_IDS))morphologyPresetEl.value='current';
+  else if(valuesEqualSubset(values,MORPHOLOGY_PRESETS['open-grown'],MORPHOLOGY_IDS))morphologyPresetEl.value='open-grown';
+  else if(valuesEqualSubset(values,MORPHOLOGY_PRESETS['bedford-2022'],MORPHOLOGY_IDS))morphologyPresetEl.value='bedford-2022';
   else morphologyPresetEl.value='custom';
+}
+function syncFoliagePreset(){
+  const values=getValueState();
+  for(const name of ['current','winter','summer','dense']){
+    if(valuesEqualSubset(values,FOLIAGE_PRESETS[name],FOLIAGE_IDS)){
+      foliagePresetEl.value=name;
+      return;
+    }
+  }
+  foliagePresetEl.value='custom';
 }
 function applyMorphologyPreset(name){
   const preset=MORPHOLOGY_PRESETS[name];
   if(!preset)return;
-  applyValueState(preset,{rebuildNow:true,persist:true});
+  const patch=Object.fromEntries(MORPHOLOGY_IDS.filter(id=>preset[id]!==undefined).map(id=>[id,preset[id]]));
+  applyValueState(patch,{rebuildNow:true,persist:true});
   morphologyPresetEl.value=name;
+  syncFoliagePreset();
   const messages={
-    current:'Current baseline applied',
-    'open-grown':'Open-grown oak applied',
-    'bedford-2022':'Bedford Oak photo-match applied'
+    current:'Current morphology applied',
+    'open-grown':'Open-grown oak morphology applied',
+    'bedford-2022':'Bedford Oak morphology applied'
   };
   showToast(messages[name]||'Morphology applied');
+}
+function applyFoliagePreset(name){
+  const preset=FOLIAGE_PRESETS[name];
+  if(!preset)return;
+  applyValueState(preset,{rebuildNow:true,persist:true});
+  foliagePresetEl.value=name;
+  syncMorphologyPreset();
+  const messages={
+    current:'Current sparse foliage applied',
+    winter:'Winter-ish foliage applied',
+    summer:'Summer foliage applied',
+    dense:'Dense canopy applied'
+  };
+  showToast(messages[name]||'Foliage applied');
 }
 
 function disposeObject(obj){
@@ -291,6 +346,7 @@ function applyMode(){
   grid.visible=!silhouette;
   scene.background.set(silhouette?0xf5f3ea:0x9aa69b);
   if(woodMesh){
+    woodMesh.visible=woodVisible;
     woodMesh.material.wireframe=wire;
     woodMesh.material.color.set(silhouette?0x111111:0xd9c9ad);
     woodMesh.material.map=silhouette?null:barkMap;
@@ -309,6 +365,7 @@ function applyMode(){
     leafMesh.material.color.set(silhouette?0x090909:0xffffff);
   }
   document.getElementById('silhouette').setAttribute('aria-pressed',String(silhouette));
+  document.getElementById('wood').setAttribute('aria-pressed',String(woodVisible));
   document.getElementById('wire').setAttribute('aria-pressed',String(wire));
   document.getElementById('leaves').setAttribute('aria-pressed',String(leavesVisible));
   document.getElementById('roots').setAttribute('aria-pressed',String(rootsVisible));
@@ -342,6 +399,8 @@ function rebuild(){
     stems:skeleton.stems.length,
     twigs:skeleton.terminalStems.length,
     leaves:leafMesh.count,
+    terminalLeafGroups:leafMesh.userData.foliagePlan?.terminalGroups||0,
+    innerLeafGroups:leafMesh.userData.foliagePlan?.innerGroups||0,
     woodTri:woodGeometry.index.count/3,
     rootTri:rootGeometry.index.count/3
   };
@@ -355,7 +414,7 @@ function updateStaticStats(){
   const s=treeGroup?.userData.stats;
   if(!s)return;
   document.getElementById('treeStats').textContent=
-    `STEMS ${s.stems} · TWIGS ${s.twigs} · LEAVES ${s.leaves} · TREE TRI ${Math.round(s.woodTri+s.rootTri).toLocaleString()} · BUILD ${lastBuildMs.toFixed(1)}ms`;
+    `STEMS ${s.stems} · TWIGS ${s.twigs} · LEAVES ${s.leaves} · LEAF GROUPS ${s.terminalLeafGroups}+${s.innerLeafGroups} · TREE TRI ${Math.round(s.woodTri+s.rootTri).toLocaleString()} · BUILD ${lastBuildMs.toFixed(1)}ms`;
 }
 function updateReferenceMetrics(){
   if(!treeGroup||!currentSpec)return;
@@ -378,6 +437,7 @@ for(const id of ids){
     syncLabels();
     persistValues();
     syncMorphologyPreset();
+    syncFoliagePreset();
     clearTimeout(rebuildTimer);
     rebuildTimer=setTimeout(rebuild,90);
   });
@@ -400,6 +460,7 @@ function setView(name,{persist=true}={}){
 for(const b of viewButtons)b.addEventListener('click',()=>setView(b.dataset.view));
 
 document.getElementById('silhouette').addEventListener('click',()=>{silhouette=!silhouette;applyMode()});
+document.getElementById('wood').addEventListener('click',()=>{woodVisible=!woodVisible;applyMode()});
 document.getElementById('wire').addEventListener('click',()=>{wire=!wire;applyMode()});
 document.getElementById('leaves').addEventListener('click',()=>{leavesVisible=!leavesVisible;applyMode()});
 document.getElementById('roots').addEventListener('click',()=>{rootsVisible=!rootsVisible;applyMode()});
@@ -410,6 +471,11 @@ bedfordMatchViewBtn.addEventListener('click',()=>{
   showToast('Bedford silhouette check');
 });
 
+foliagePresetEl.addEventListener('change',()=>{
+  if(foliagePresetEl.value==='custom')return;
+  applyFoliagePreset(foliagePresetEl.value);
+});
+
 morphologyPresetEl.addEventListener('change',()=>{
   if(morphologyPresetEl.value==='custom')return;
   applyMorphologyPreset(morphologyPresetEl.value);
@@ -417,13 +483,14 @@ morphologyPresetEl.addEventListener('change',()=>{
 
 document.getElementById('random').addEventListener('click',()=>{
   el.seed.value=1+Math.floor(Math.random()*999);
-  syncLabels();persistValues();syncMorphologyPreset();rebuild();
+  syncLabels();persistValues();syncMorphologyPreset();syncFoliagePreset();rebuild();
   showToast('New seed');
 });
 document.getElementById('reset').addEventListener('click',()=>{
   removeStored(STORAGE.values);
   applyValueState(defaultValues,{rebuildNow:true,persist:false});
   morphologyPresetEl.value='current';
+  foliagePresetEl.value='current';
   showToast('Defaults restored');
 });
 document.getElementById('savePreset').addEventListener('click',()=>{
@@ -435,6 +502,7 @@ document.getElementById('loadPreset').addEventListener('click',()=>{
   if(!saved){showToast('No saved preset');return}
   applyValueState(saved);
   syncMorphologyPreset();
+  syncFoliagePreset();
   showToast('Preset loaded');
 });
 document.getElementById('copyPreset').addEventListener('click',async()=>{
@@ -496,6 +564,7 @@ resize();
 syncLabels();
 restoreState();
 syncMorphologyPreset();
+syncFoliagePreset();
 rebuild();
 setView(currentView,{persist:false});
 

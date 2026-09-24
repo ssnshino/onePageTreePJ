@@ -40,6 +40,12 @@
       sizeVariance:.24,
       downAngle:52,
       angleVariance:12,
-      alphaTest:.42
+      alphaTest:.42,
+      canopyDensity:1.0,
+      innerFill:.12,
+      clumpSpan:.72,
+      deadBranchFraction:.04,
+      lowerCrownFill:.55,
+      skyGap:.18
     }
   };
