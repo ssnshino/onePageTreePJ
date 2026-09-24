@@ -70,14 +70,23 @@
   }
 
   function createOldOakLeafGeometry(){
-    const rows=4,positions=[],uvs=[],indices=[];
+    // Trim the alpha card around the leaf silhouette instead of drawing a large
+    // transparent rectangle. This reduces overdraw and the obvious "paper quad" edge.
+    const rows=9,positions=[],uvs=[],indices=[];
     for(let r=0;r<rows;r++){
-      const y=r/(rows-1),bow=Math.sin(Math.PI*y)*.055;
+      const y=r/(rows-1);
+      const body=Math.pow(Math.sin(Math.PI*y),.72);
+      const lobes=.79+.21*Math.sin((y*4.15-.15)*Math.PI*2);
+      const texHalf=.045+.255*body*lobes;
+      const worldHalf=.10+.90*(texHalf/.30);
+      const bow=Math.sin(Math.PI*y)*.055;
+
       for(let side=0;side<2;side++){
-        const x=side?.5:-.5;
-        const z=bow*(1-Math.abs(x)*.35)+(side?-.008:.008);
+        const sign=side?1:-1;
+        const x=sign*worldHalf*.5;
+        const z=bow*(1-Math.abs(x)*.28)+(side?-.008:.008);
         positions.push(x,y,z);
-        uvs.push(side,y);
+        uvs.push(.5+sign*texHalf,y);
       }
     }
     for(let r=0;r<rows-1;r++){

@@ -53,6 +53,11 @@
         if(level===0){
           const flare=Math.max(0,(spec.flareFrac-t)/spec.flareFrac);
           radius*=1+spec.rootFlare*flare*flare*flare;
+        }else if(spec.junctionCollarScale>0 && t<spec.junctionCollarLength){
+          // Low-cost branch collar: soften the visual "tube stabbed into tube"
+          // transition before a future continuous-junction mesh pass.
+          const collar=1-t/spec.junctionCollarLength;
+          radius*=1+spec.junctionCollarScale*collar*collar;
         }
         rings.push({pos:pos.clone(),tangent:tangent.clone(),normal:normal.clone(),radius});
 

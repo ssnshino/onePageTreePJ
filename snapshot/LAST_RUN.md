@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-24T13:32:00+09:00
+Updated: 2026-09-24T14:01:00+09:00
 
 ## Session Summary
 
@@ -141,3 +141,24 @@ CI:
 
 Next:
 Human real-device visual review of the Prototype 02 artifact.
+
+## Current Run — OLD OAK TREE LAB
+
+The project now has a dedicated isolated tree tuning scene.
+
+Reason:
+the environment has improved enough that remaining tree defects should be judged without water, mountains, fog, or composition masking them.
+
+Research-driven changes:
+- low-cost branch collar/bulge at branch bases
+- leaf-card geometry trimmed toward the oak-leaf silhouette
+
+TREE LAB exposes morphology parameters and fixed review views while using the same production OLD OAK source.
+
+CI:
+- run `35958048878`
+- main world PASS
+- TREE LAB PASS
+
+Next:
+Human parameter tuning in `tree-lab-old-oak.html`.

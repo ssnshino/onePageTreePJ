@@ -31,6 +31,8 @@
     rootCount:10,
     rootLength:[1.8,3.8],
     rootRadius:[.34,.48],
+    junctionCollarScale:.24,
+    junctionCollarLength:.18,
     foliage:{
       desktopLeavesPerTwig:9,
       mobileLeavesPerTwig:5,
