@@ -90,11 +90,35 @@ let uiHidden=false;
 let currentView='three';
 let toastTimer=0;
 
-const ids=['seed','height','radius','flare','collar','branches','angle','gnarl1','gnarl2','upPull','leafCount','leafSize'];
+const ids=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','gnarl1','gnarl2','upPull','leafCount','leafSize'];
 const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
 const defaultValues=Object.fromEntries(ids.map(id=>[id,el[id].value]));
 const accordionEls=[...document.querySelectorAll('.accordion')];
 const viewButtons=[...document.querySelectorAll('[data-view]')];
+const morphologyPresetEl=document.getElementById('morphologyPreset');
+
+const MORPHOLOGY_PRESETS={
+  current:{...defaultValues},
+  // Research-informed experiment, not a sourced numeric standard.
+  // USFS/Morton/NC State describe open-grown mature white oak as short/stocky,
+  // broad-rounded, wide-spreading and strongly horizontal.
+  'open-grown':{
+    seed:'187',
+    height:'10.75',
+    radius:'0.96',
+    trunkClear:'0.12',
+    flare:'1.04',
+    collar:'0.30',
+    branches:'9',
+    angle:'75',
+    crownSpread:'0.64',
+    gnarl1:'0.125',
+    gnarl2:'0.220',
+    upPull:'0.14',
+    leafCount:'11',
+    leafSize:'0.44'
+  }
+};
 
 function safeParse(value,fallback=null){
   try{return JSON.parse(value)}catch{return fallback}
@@ -181,10 +205,12 @@ function readSpec(){
   s.seed=Number(el.seed.value);
   s.trunkLength=Number(el.height.value);
   s.trunkRadius=Number(el.radius.value);
+  s.trunkClear=Number(el.trunkClear.value);
   s.rootFlare=Number(el.flare.value);
   s.junctionCollarScale=Number(el.collar.value);
   s.children[0]=Math.round(Number(el.branches.value));
   s.branchAngle[0]=Number(el.angle.value);
+  s.lengthRatio[0]=Number(el.crownSpread.value);
   s.gnarl[1]=Number(el.gnarl1.value);
   s.gnarl[2]=Number(el.gnarl2.value);
   s.upPull[2]=Number(el.upPull.value);
@@ -198,6 +224,22 @@ function syncLabels(){
     const out=document.querySelector(`[data-value="${id}"]`);
     if(out)out.textContent=el[id].value;
   }
+}
+function valuesEqualPreset(values,preset){
+  return ids.every(id=>String(values[id])===String(preset[id]));
+}
+function syncMorphologyPreset(){
+  const values=getValueState();
+  if(valuesEqualPreset(values,MORPHOLOGY_PRESETS.current))morphologyPresetEl.value='current';
+  else if(valuesEqualPreset(values,MORPHOLOGY_PRESETS['open-grown']))morphologyPresetEl.value='open-grown';
+  else morphologyPresetEl.value='custom';
+}
+function applyMorphologyPreset(name){
+  const preset=MORPHOLOGY_PRESETS[name];
+  if(!preset)return;
+  applyValueState(preset,{rebuildNow:true,persist:true});
+  morphologyPresetEl.value=name;
+  showToast(name==='open-grown'?'Open-grown oak applied':'Current baseline applied');
 }
 
 function disposeObject(obj){
@@ -289,6 +331,7 @@ for(const id of ids){
   el[id].addEventListener('input',()=>{
     syncLabels();
     persistValues();
+    syncMorphologyPreset();
     clearTimeout(rebuildTimer);
     rebuildTimer=setTimeout(rebuild,90);
   });
@@ -315,14 +358,20 @@ document.getElementById('wire').addEventListener('click',()=>{wire=!wire;applyMo
 document.getElementById('leaves').addEventListener('click',()=>{leavesVisible=!leavesVisible;applyMode()});
 document.getElementById('roots').addEventListener('click',()=>{rootsVisible=!rootsVisible;applyMode()});
 
+morphologyPresetEl.addEventListener('change',()=>{
+  if(morphologyPresetEl.value==='custom')return;
+  applyMorphologyPreset(morphologyPresetEl.value);
+});
+
 document.getElementById('random').addEventListener('click',()=>{
   el.seed.value=1+Math.floor(Math.random()*999);
-  syncLabels();persistValues();rebuild();
+  syncLabels();persistValues();syncMorphologyPreset();rebuild();
   showToast('New seed');
 });
 document.getElementById('reset').addEventListener('click',()=>{
   removeStored(STORAGE.values);
   applyValueState(defaultValues,{rebuildNow:true,persist:false});
+  morphologyPresetEl.value='current';
   showToast('Defaults restored');
 });
 document.getElementById('savePreset').addEventListener('click',()=>{
@@ -333,6 +382,7 @@ document.getElementById('loadPreset').addEventListener('click',()=>{
   const saved=safeParse(readStored(STORAGE.preset));
   if(!saved){showToast('No saved preset');return}
   applyValueState(saved);
+  syncMorphologyPreset();
   showToast('Preset loaded');
 });
 document.getElementById('copyPreset').addEventListener('click',async()=>{
@@ -393,6 +443,7 @@ resize();
 
 syncLabels();
 restoreState();
+syncMorphologyPreset();
 rebuild();
 setView(currentView,{persist:false});
 

@@ -390,3 +390,27 @@ kbd{
   .shortcut-help{display:none}
   .toast{bottom:calc(72px + env(safe-area-inset-bottom))}
 }
+
+.morphology-block{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:1px}
+.preset-select{
+  width:100%;
+  min-height:38px;
+  padding:0 34px 0 10px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:rgba(0,0,0,.20);
+  color:var(--text);
+  font-size:10px;
+  font-weight:750;
+  letter-spacing:.02em;
+  appearance:auto;
+}
+.research-note{
+  margin:6px 2px 0;
+  color:var(--muted);
+  font-size:8px;
+  line-height:1.45;
+}
+@media(max-width:700px){
+  .preset-select{min-height:44px}
+}
