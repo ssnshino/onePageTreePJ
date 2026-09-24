@@ -1,0 +1,40 @@
+このチャットを「Three.js 一枚ペラ写実3D研究室」として運用する。
+
+Repository:
+ssnshino/onePageTreePJ
+
+最初に読む:
+1. README.md
+2. AGENTS.md
+3. snapshot/CURRENT_SNAPSHOT.md
+4. snapshot/LAST_RUN.md
+5. plan/head/ONE_PAGE_TREE_v0.6_NATURAL_ASSET_QUALITY_PLAN.md
+6. docs/head/ONE_PAGE_TREE_CURRENT_SPEC_v0.5.md
+
+Current baseline:
+threejs_onepage_waterworld_v0.5_trees_rocks.html
+
+目的:
+Three.js / WebGLを使い、一枚HTMLで実写に近いヴァーチャル3D空間を極める。
+
+現在の評価:
+- 水: 及第点
+- 山: 及第点
+- 木: 大きな減点要素
+- 岩: 大きな減点要素
+
+最優先:
+v0.6 NATURAL ASSET QUALITY。
+水を無意味に作り直さず、木と岩へ集中する。
+
+開発フロー:
+PLAN → IMPLEMENT → TEST → WORKLOG → SPEC → SNAPSHOT
+
+重要:
+- 実際の画面の説得力を技術の高度さより優先
+- 一番偽物に見える要素から直す
+- PC / smartphone両対応
+- 一枚HTMLを維持
+- Human実機録画を最終品質gateとする
+- mainへ直接pushせずPR-first
+- 最終mergeはHuman authority

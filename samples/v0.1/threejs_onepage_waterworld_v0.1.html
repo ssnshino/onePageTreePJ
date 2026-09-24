@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ONE-PAGE WATER WORLD v0.1</title>
+<style>
+:root{--bg:#071018;--panel:rgba(5,14,24,.72);--line:rgba(180,220,255,.26);--text:#e9f6ff;--muted:#9bb3c5;--accent:#8ce7ff}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#app{position:relative;width:100%;height:100%}#stage{position:absolute;inset:0}canvas{display:block;width:100%;height:100%;touch-action:none}
+.panel{position:absolute;z-index:10;left:10px;top:10px;width:min(360px,calc(100% - 20px));padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(8px)}
+.title{font-weight:800;letter-spacing:.08em;font-size:14px}.sub{margin-top:3px;color:var(--muted);font-size:10px;line-height:1.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.ctrl{border:1px solid rgba(180,220,255,.16);border-radius:8px;padding:8px;background:rgba(7,19,31,.46)}
+.ctrl label{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#cfeaff;margin-bottom:6px}.ctrl input{width:100%}
+.buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}button{min-height:38px;border:1px solid var(--line);border-radius:7px;background:#0c1d2c;color:var(--text);font:inherit;font-size:10px;padding:6px;cursor:pointer}
+button:hover{border-color:var(--accent)}button.on{color:#06131b;background:var(--accent);border-color:var(--accent);font-weight:800}
+.hud{position:absolute;right:10px;bottom:10px;z-index:10;max-width:min(360px,calc(100% - 20px));padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(5,14,24,.58);color:#b8d4e6;font-size:9px;line-height:1.55;backdrop-filter:blur(6px)}
+.badge{color:#fff}.status{color:#8fffc8}.error{position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100% - 28px));padding:18px;border:1px solid #ff6e7c;border-radius:10px;background:#260b10;color:#ffdfe3;font-size:12px;line-height:1.65;display:none}
+@media(max-width:640px){.panel{padding:8px}.grid{gap:6px}.ctrl{padding:7px}.buttons{gap:6px}button{font-size:9px;min-height:40px}.hud{font-size:8px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="app">
+<div id="stage"></div>
+<section class="panel">
+<div class="title">ONE-PAGE WATER WORLD <span style="color:#8ce7ff">v0.1</span></div>
+<div class="sub">Three.js / WebGL 実験。ドラッグで視点回転、ホイール/ピンチでズーム。水面は頂点シェーダーで常時変形。</div>
+<div class="grid">
+<div class="ctrl"><label><span>WAVE</span><b id="waveVal">1.00</b></label><input id="wave" type="range" min="0" max="2.5" step="0.01" value="1"></div>
+<div class="ctrl"><label><span>WIND</span><b id="windVal">1.00</b></label><input id="wind" type="range" min="0" max="3" step="0.01" value="1"></div>
+<div class="ctrl"><label><span>SUN</span><b id="sunVal">0.78</b></label><input id="sun" type="range" min="0" max="1" step="0.01" value="0.78"></div>
+<div class="ctrl"><label><span>FOG</span><b id="fogVal">0.55</b></label><input id="fog" type="range" min="0" max="1" step="0.01" value="0.55"></div>
+</div>
+<div class="buttons"><button id="pause">PAUSE</button><button id="viewLow">LOW VIEW</button><button id="viewHigh">HIGH VIEW</button></div>
+</section>
+<div class="hud"><div><span class="badge">RENDER:</span> WebGL / PerspectiveCamera / ShaderMaterial</div><div><span class="badge">WATER:</span> procedural vertex waves</div><div><span class="badge">THREE:</span> r186 / 0.186.0</div><div id="fps" class="status">FPS --</div></div>
+<div id="error" class="error"></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const stage=document.getElementById('stage');
+const errorBox=document.getElementById('error');
+try{
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9eb8c9);
+scene.fog=new THREE.FogExp2(0x9fb6c2,.010);
+
+const camera=new THREE.PerspectiveCamera(58,1,.1,500);
+camera.position.set(18,8,24);
+
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1;
+stage.appendChild(renderer.domElement);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=.055;controls.target.set(0,1.1,-10);
+controls.minDistance=5;controls.maxDistance=80;controls.maxPolarAngle=Math.PI*.49;
+
+scene.add(new THREE.HemisphereLight(0xd9efff,0x213126,1.7));
+const sunLight=new THREE.DirectionalLight(0xffddb0,3);sunLight.position.set(-20,28,-35);scene.add(sunLight);
+
+const sunDisk=new THREE.Mesh(new THREE.SphereGeometry(3.4,32,16),new THREE.MeshBasicMaterial({color:0xffc47a}));
+sunDisk.position.set(-48,20,-90);scene.add(sunDisk);
+
+const horizon=new THREE.Mesh(new THREE.PlaneGeometry(300,90),new THREE.MeshBasicMaterial({color:0xb8c9cf,transparent:true,opacity:.22,depthWrite:false}));
+horizon.position.set(0,25,-115);scene.add(horizon);
+
+function makeRock(x,z,sx,sy,sz,color=0x455048){
+ const geo=new THREE.DodecahedronGeometry(1,1);
+ const mat=new THREE.MeshStandardMaterial({color,roughness:.94,metalness:.02});
+ const m=new THREE.Mesh(geo,mat);m.position.set(x,sy*.34-.35,z);m.scale.set(sx,sy,sz);
+ m.rotation.set(Math.random()*.4,Math.random()*Math.PI,Math.random()*.25);scene.add(m);return m;
+}
+makeRock(-12,-16,8,5,6,0x505c50);makeRock(-8,-19,5,3.4,4.5,0x3f4a43);
+makeRock(15,-28,7,4,5,0x526054);makeRock(32,-48,12,8,9,0x4a554c);makeRock(-36,-54,15,10,12,0x4c564c);
+
+const mountainMat=new THREE.MeshStandardMaterial({color:0x56645c,roughness:1});
+for(let i=0;i<13;i++){
+ const h=8+(i%4)*4+Math.random()*3;
+ const cone=new THREE.Mesh(new THREE.ConeGeometry(7+(i%3)*2,h,5),mountainMat);
+ const a=-1.15+(i/12)*2.3,r=95+(i%2)*10;
+ cone.position.set(Math.sin(a)*r,h*.45-1.8,-Math.cos(a)*r-18);
+ cone.rotation.y=Math.random()*Math.PI;scene.add(cone);
+}
+
+const waterGeo=new THREE.PlaneGeometry(180,180,220,220);waterGeo.rotateX(-Math.PI/2);
+const waterUniforms={
+ uTime:{value:0},uAmp:{value:1},uWind:{value:1},uSun:{value:.78},
+ uDeep:{value:new THREE.Color(0x0a3c55)},uShallow:{value:new THREE.Color(0x2b88a2)},
+ uSky:{value:new THREE.Color(0xbfd4df)},uSunColor:{value:new THREE.Color(0xffd7a0)}
+};
+const waterMat=new THREE.ShaderMaterial({
+ uniforms:waterUniforms,
+ vertexShader:`
+ uniform float uTime;uniform float uAmp;uniform float uWind;
+ varying vec3 vWorldPos;varying vec3 vWorldNormal;varying float vHeight;
+ float waveHeight(vec2 p){
+   float t=uTime*uWind;float h=0.0;
+   h+=sin(p.x*.19+t*1.20)*.42;
+   h+=sin(p.y*.15-t*.86)*.31;
+   h+=sin((p.x+p.y)*.085+t*.51)*.48;
+   h+=sin((p.x*.55-p.y)*.27-t*1.65)*.12;
+   return h*uAmp;
+ }
+ void main(){
+   vec3 p=position;float e=.18;float h=waveHeight(p.xz);
+   float hx=waveHeight(p.xz+vec2(e,0.0));float hz=waveHeight(p.xz+vec2(0.0,e));
+   p.y+=h;
+   vec3 localNormal=normalize(vec3(-(hx-h)/e,1.0,-(hz-h)/e));
+   vec4 world=modelMatrix*vec4(p,1.0);
+   vWorldPos=world.xyz;vWorldNormal=normalize(mat3(modelMatrix)*localNormal);vHeight=h;
+   gl_Position=projectionMatrix*viewMatrix*world;
+ }`,
+ fragmentShader:`
+ uniform float uSun;uniform vec3 uDeep;uniform vec3 uShallow;uniform vec3 uSky;uniform vec3 uSunColor;
+ varying vec3 vWorldPos;varying vec3 vWorldNormal;varying float vHeight;
+ void main(){
+   vec3 N=normalize(vWorldNormal);vec3 V=normalize(cameraPosition-vWorldPos);
+   vec3 sunDir=normalize(vec3(-.34,.58,-.74));
+   float fresnel=pow(1.0-max(dot(N,V),0.0),3.2);
+   float facing=clamp(dot(N,vec3(0.0,1.0,0.0)),0.0,1.0);
+   vec3 base=mix(uDeep,uShallow,clamp(.36+vHeight*.14+facing*.25,0.0,1.0));
+   vec3 col=mix(base,uSky,fresnel*.72);
+   vec3 R=reflect(-sunDir,N);
+   float spec=pow(max(dot(R,V),0.0),150.0)*(2.2*uSun);
+   float broad=pow(max(dot(R,V),0.0),18.0)*(.40*uSun);
+   col+=uSunColor*(spec+broad);col+=vec3(.08,.12,.15)*fresnel;
+   float d=length(cameraPosition-vWorldPos);float haze=smoothstep(45.0,150.0,d);
+   col=mix(col,uSky*.83,haze*.72);
+   gl_FragColor=vec4(col,1.0);
+ }`,
+ side:THREE.DoubleSide
+});
+const water=new THREE.Mesh(waterGeo,waterMat);scene.add(water);
+
+const postMat=new THREE.MeshStandardMaterial({color:0x4b2f21,roughness:.9});
+for(const [x,z,h] of [[-5,-9,2.5],[5,-15,3.4],[10,-7,2],[-18,-28,4.2]]){
+ const post=new THREE.Mesh(new THREE.CylinderGeometry(.10,.13,h,8),postMat);
+ post.position.set(x,h/2-.3,z);scene.add(post);
+}
+
+const waveInput=document.getElementById('wave'),windInput=document.getElementById('wind'),sunInput=document.getElementById('sun'),fogInput=document.getElementById('fog');
+const waveVal=document.getElementById('waveVal'),windVal=document.getElementById('windVal'),sunVal=document.getElementById('sunVal'),fogVal=document.getElementById('fogVal');
+function syncUi(){
+ const wave=Math.max(0,Math.min(2.5,Number(waveInput.value)||0));
+ const wind=Math.max(0,Math.min(3,Number(windInput.value)||0));
+ const sun=Math.max(0,Math.min(1,Number(sunInput.value)||0));
+ const fog=Math.max(0,Math.min(1,Number(fogInput.value)||0));
+ waterUniforms.uAmp.value=wave;waterUniforms.uWind.value=wind;waterUniforms.uSun.value=sun;
+ sunLight.intensity=.4+sun*3.4;renderer.toneMappingExposure=.72+sun*.52;scene.fog.density=.002+fog*.018;
+ waveVal.textContent=wave.toFixed(2);windVal.textContent=wind.toFixed(2);sunVal.textContent=sun.toFixed(2);fogVal.textContent=fog.toFixed(2);
+}
+[waveInput,windInput,sunInput,fogInput].forEach(el=>el.addEventListener('input',syncUi));syncUi();
+
+let running=!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const pauseBtn=document.getElementById('pause');
+if(!running)pauseBtn.textContent='RESUME';
+pauseBtn.addEventListener('click',()=>{running=!running;pauseBtn.textContent=running?'PAUSE':'RESUME';pauseBtn.classList.toggle('on',!running)});
+
+function setView(pos,target){camera.position.copy(pos);controls.target.copy(target);controls.update()}
+document.getElementById('viewLow').addEventListener('click',()=>setView(new THREE.Vector3(16,5.2,20),new THREE.Vector3(0,1,-14)));
+document.getElementById('viewHigh').addEventListener('click',()=>setView(new THREE.Vector3(26,26,34),new THREE.Vector3(0,0,-20)));
+
+const clock=new THREE.Clock();let simTime=0,fpsFrames=0,fpsLast=performance.now();const fpsEl=document.getElementById('fps');
+function resize(){const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stage);resize();
+
+renderer.setAnimationLoop(()=>{
+ const dt=Math.min(.05,clock.getDelta());if(running)simTime+=dt;waterUniforms.uTime.value=simTime;
+ controls.update();renderer.render(scene,camera);
+ fpsFrames++;const now=performance.now();
+ if(now-fpsLast>=700){const fps=fpsFrames*1000/(now-fpsLast);fpsEl.textContent=`FPS ${fps.toFixed(1)} · ${renderer.info.render.triangles.toLocaleString()} TRI`;fpsFrames=0;fpsLast=now}
+});
+}catch(err){
+ console.error(err);errorBox.style.display='block';
+ errorBox.textContent='Three.js の初期化に失敗しました。\n\n'+(err?.message||String(err))+'\n\nこの版は Three.js を CDN から読み込むため、初回実行時はネット接続が必要です。';
+}
+</script>
+</body>
+</html>

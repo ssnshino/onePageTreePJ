@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ONE-PAGE WATER WORLD v0.2 — Real Reflection Test</title>
+<style>
+:root{
+  --panel:rgba(5,12,18,.72);
+  --line:rgba(195,228,242,.28);
+  --text:#eefaff;
+  --muted:#9ab3bf;
+  --accent:#8de8ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071018;color:var(--text);
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#app{position:relative;width:100%;height:100%}
+#stage{position:absolute;inset:0}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.panel{
+  position:absolute;left:10px;top:10px;z-index:10;
+  width:min(390px,calc(100% - 20px));padding:10px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  backdrop-filter:blur(8px);box-shadow:0 10px 30px #0005
+}
+.title{font-weight:800;letter-spacing:.06em;font-size:14px}
+.title b{color:var(--accent)}
+.sub{margin-top:3px;font-size:10px;color:var(--muted);line-height:1.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.ctrl{padding:7px;border:1px solid #bce4f229;border-radius:8px;background:#07182477}
+.ctrl label{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;font-size:10px;color:#d6f1ff}
+.ctrl input{width:100%}
+.buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+button{
+  min-width:0;min-height:38px;padding:6px 3px;border:1px solid var(--line);border-radius:7px;
+  background:#0b1d29;color:var(--text);font:inherit;font-size:9px;cursor:pointer
+}
+button:hover{border-color:var(--accent)}
+button.on{background:var(--accent);border-color:var(--accent);color:#041016;font-weight:800}
+.hud{
+  position:absolute;right:10px;bottom:10px;z-index:10;
+  max-width:min(420px,calc(100% - 20px));padding:8px 10px;
+  border:1px solid var(--line);border-radius:8px;background:rgba(5,12,18,.60);
+  color:#a9c7d5;font-size:9px;line-height:1.55;backdrop-filter:blur(6px)
+}
+.hud strong{color:#fff}.ok{color:#8fffc7}
+.error{
+  position:absolute;left:50%;top:50%;z-index:30;transform:translate(-50%,-50%);
+  width:min(600px,calc(100% - 28px));padding:18px;border:1px solid #ff6f7d;border-radius:10px;
+  background:#260b10;color:#ffdfe3;font-size:12px;line-height:1.65;white-space:pre-wrap;display:none
+}
+.loading{
+  position:absolute;left:50%;top:50%;z-index:20;transform:translate(-50%,-50%);
+  padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#061019cc;
+  color:#d8f5ff;font-size:11px;pointer-events:none
+}
+@media(max-width:640px){
+  .panel{padding:8px}.grid{gap:5px}.ctrl{padding:6px}.buttons{gap:5px}
+  button{font-size:8px;min-height:40px}.hud{font-size:8px}
+}
+</style>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+
+  <section class="panel">
+    <div class="title">ONE-PAGE WATER WORLD <b>v0.2</b></div>
+    <div class="sub">
+      REAL REFLECTION TEST — Three.js公式 Water + Sky。周囲の岩・桟橋・地形を反射用カメラで実際に再描画。
+      ドラッグ: 視点 / ホイール・ピンチ: ズーム
+    </div>
+
+    <div class="grid">
+      <div class="ctrl">
+        <label><span>WAVE DISTORTION</span><b id="waveVal">3.7</b></label>
+        <input id="wave" type="range" min="0" max="8" step="0.1" value="3.7">
+      </div>
+      <div class="ctrl">
+        <label><span>RIPPLE SIZE</span><b id="sizeVal">1.0</b></label>
+        <input id="size" type="range" min="0.2" max="5" step="0.1" value="1">
+      </div>
+      <div class="ctrl">
+        <label><span>WIND SPEED</span><b id="windVal">0.75</b></label>
+        <input id="wind" type="range" min="0" max="2.5" step="0.05" value="0.75">
+      </div>
+      <div class="ctrl">
+        <label><span>SUN ELEVATION</span><b id="sunVal">8°</b></label>
+        <input id="sun" type="range" min="1" max="45" step="1" value="8">
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="pause">PAUSE</button>
+      <button id="calm">CALM</button>
+      <button id="windy">WINDY</button>
+      <button id="sunset">SUNSET</button>
+    </div>
+  </section>
+
+  <div class="hud">
+    <div><strong>WATER</strong> planar reflection + moving normal field</div>
+    <div><strong>SKY</strong> Preetham analytic sky / physical sun</div>
+    <div><strong>LAND</strong> procedural terrain + instanced conifers + soft shadows</div>
+    <div><strong>THREE</strong> r186 / CDN module</div>
+    <div id="fps" class="ok">FPS --</div>
+  </div>
+
+  <div id="loading" class="loading">THREE.JS / WATER INITIALIZING…</div>
+  <div id="error" class="error"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Water } from 'three/addons/objects/Water.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+
+const stage=document.getElementById('stage');
+const loading=document.getElementById('loading');
+const errorBox=document.getElementById('error');
+
+try{
+  const isMobile=matchMedia('(max-width: 700px)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
+
+  // ---------------------------------------------------------------------------
+  // Renderer / Scene / Camera
+  // ---------------------------------------------------------------------------
+  const renderer=new THREE.WebGLRenderer({
+    antialias:true,
+    powerPreference:'high-performance'
+  });
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobile?1.35:1.8));
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=.62;
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  stage.appendChild(renderer.domElement);
+
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0xb5c2c4,.0068);
+
+  const camera=new THREE.PerspectiveCamera(52,1,.2,1200);
+  camera.position.set(27,6.0,43);
+
+  const controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;
+  controls.dampingFactor=.055;
+  controls.target.set(0,1,-28);
+  controls.minDistance=7;
+  controls.maxDistance=115;
+  controls.maxPolarAngle=Math.PI*.495;
+
+  // ---------------------------------------------------------------------------
+  // Analytic Sky + Sun
+  // ---------------------------------------------------------------------------
+  const sky=new Sky();
+  sky.scale.setScalar(1000);
+  scene.add(sky);
+
+  function configureSkyMaterial(mat){
+    const u=mat.uniforms;
+    u.turbidity.value=9.0;
+    u.rayleigh.value=2.2;
+    u.mieCoefficient.value=.007;
+    u.mieDirectionalG.value=.86;
+  }
+  configureSkyMaterial(sky.material);
+
+  const sun=new THREE.Vector3();
+  let sunElevation=8;
+  const sunAzimuth=205;
+
+  const hemi=new THREE.HemisphereLight(0xcfe7ef,0x273126,.62);
+  scene.add(hemi);
+
+  const sunLight=new THREE.DirectionalLight(0xffd8a1,3.1);
+  sunLight.castShadow=true;
+  sunLight.shadow.mapSize.set(isMobile?1024:2048,isMobile?1024:2048);
+  sunLight.shadow.camera.left=-85;
+  sunLight.shadow.camera.right=85;
+  sunLight.shadow.camera.top=85;
+  sunLight.shadow.camera.bottom=-85;
+  sunLight.shadow.camera.near=.1;
+  sunLight.shadow.camera.far=260;
+  sunLight.shadow.bias=-.00035;
+  scene.add(sunLight);
+
+  // Separate sky scene for PMREM image-based lighting.
+  const envScene=new THREE.Scene();
+  const envSky=new Sky();
+  envSky.scale.setScalar(1000);
+  configureSkyMaterial(envSky.material);
+  envScene.add(envSky);
+
+  const pmrem=new THREE.PMREMGenerator(renderer);
+  let envRT=null;
+  let water=null;
+
+  function sunVector(elevation){
+    const phi=THREE.MathUtils.degToRad(90-elevation);
+    const theta=THREE.MathUtils.degToRad(sunAzimuth);
+    return new THREE.Vector3().setFromSphericalCoords(1,phi,theta);
+  }
+
+  function rebuildEnvironment(){
+    if(envRT)envRT.dispose();
+    envRT=pmrem.fromScene(envScene,.04,.1,1200,{size:isMobile?128:256});
+    scene.environment=envRT.texture;
+  }
+
+  function updateSun(rebuild=true){
+    sun.copy(sunVector(sunElevation));
+    sky.material.uniforms.sunPosition.value.copy(sun);
+    envSky.material.uniforms.sunPosition.value.copy(sun);
+    sunLight.position.copy(sun).multiplyScalar(160);
+    sunLight.target.position.set(0,0,-25);
+    if(!sunLight.target.parent)scene.add(sunLight.target);
+    if(water)water.material.uniforms.sunDirection.value.copy(sun).normalize();
+
+    // Sunset exposure / warmth.
+    const daylight=THREE.MathUtils.smoothstep(sunElevation,1,28);
+    renderer.toneMappingExposure=.46+daylight*.34;
+    hemi.intensity=.30+daylight*.48;
+    sunLight.intensity=1.7+daylight*2.2;
+    scene.fog.density=.0055+(1-daylight)*.0032;
+
+    if(rebuild)rebuildEnvironment();
+  }
+  updateSun(true);
+
+  // ---------------------------------------------------------------------------
+  // Procedural terrain
+  // ---------------------------------------------------------------------------
+  function hash2(x,z){
+    const s=Math.sin(x*127.1+z*311.7)*43758.5453123;
+    return s-Math.floor(s);
+  }
+  function smooth(t){return t*t*(3-2*t)}
+  function noise2(x,z){
+    const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi;
+    const a=hash2(xi,zi),b=hash2(xi+1,zi),c=hash2(xi,zi+1),d=hash2(xi+1,zi+1);
+    const u=smooth(xf),v=smooth(zf);
+    return THREE.MathUtils.lerp(THREE.MathUtils.lerp(a,b,u),THREE.MathUtils.lerp(c,d,u),v);
+  }
+  function fbm(x,z){
+    let a=.5,f=1,s=0,n=0;
+    for(let i=0;i<5;i++){
+      s+=(noise2(x*f,z*f)*2-1)*a;
+      n+=a;a*=.5;f*=2.03;
+    }
+    return s/n;
+  }
+  function terrainHeight(x,z){
+    const r=Math.hypot(x,z);
+    const ang=Math.atan2(z,x);
+    const shoreline=50
+      +Math.sin(ang*2.0)*8
+      +Math.sin(ang*5.0+1.3)*5
+      +fbm(x*.025,z*.025)*9;
+
+    const inland=Math.max(0,r-shoreline);
+    const rise=Math.pow(inland/48,1.38)*23;
+    const detail=fbm(x*.055,z*.055)*(1.5+Math.min(8,inland*.08));
+
+    // Lake bottom gently rises toward shore.
+    const basin=-8.5+Math.min(8.0,r*.075);
+    return inland>0 ? basin+rise+detail : basin+fbm(x*.04,z*.04)*.8;
+  }
+
+  const terrainGeo=new THREE.PlaneGeometry(260,260,isMobile?105:150,isMobile?105:150);
+  terrainGeo.rotateX(-Math.PI/2);
+  const pos=terrainGeo.attributes.position;
+  const colors=[];
+  const cDeep=new THREE.Color(0x7b725d);
+  const cSand=new THREE.Color(0xb0a47c);
+  const cGrass=new THREE.Color(0x526b43);
+  const cRock=new THREE.Color(0x62655e);
+  const colorTmp=new THREE.Color();
+
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i),z=pos.getZ(i),y=terrainHeight(x,z);
+    pos.setY(i,y);
+
+    if(y<-.7)colorTmp.copy(cDeep);
+    else if(y<1.4)colorTmp.copy(cSand);
+    else if(y<14)colorTmp.copy(cGrass);
+    else colorTmp.copy(cRock);
+
+    const variation=.86+hash2(x*.7,z*.7)*.22;
+    colorTmp.multiplyScalar(variation);
+    colors.push(colorTmp.r,colorTmp.g,colorTmp.b);
+  }
+  terrainGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  terrainGeo.computeVertexNormals();
+
+  const terrainMat=new THREE.MeshStandardMaterial({
+    vertexColors:true,
+    roughness:.94,
+    metalness:0
+  });
+  const terrain=new THREE.Mesh(terrainGeo,terrainMat);
+  terrain.receiveShadow=true;
+  terrain.castShadow=true;
+  scene.add(terrain);
+
+  // ---------------------------------------------------------------------------
+  // Instanced trees for scale, silhouette and reflected detail
+  // ---------------------------------------------------------------------------
+  const treeCount=isMobile?180:330;
+  const treeGeo=new THREE.ConeGeometry(.58,3.2,7);
+  treeGeo.translate(0,1.6,0);
+  const treeMat=new THREE.MeshStandardMaterial({color:0x284b31,roughness:.92});
+  const trees=new THREE.InstancedMesh(treeGeo,treeMat,treeCount);
+  trees.castShadow=true;
+  trees.receiveShadow=true;
+
+  const dummy=new THREE.Object3D();
+  let placed=0;
+  for(let i=0;i<treeCount*12 && placed<treeCount;i++){
+    const a=hash2(i,91)*Math.PI*2;
+    const r=52+hash2(i,33)*52;
+    const x=Math.cos(a)*r,z=Math.sin(a)*r;
+    const y=terrainHeight(x,z);
+    if(y<1.0 || y>17)continue;
+
+    const s=.65+hash2(i,17)*1.45;
+    dummy.position.set(x,y,z);
+    dummy.rotation.set(0,hash2(i,7)*Math.PI*2,0);
+    dummy.scale.set(s*.7,s,s*.7);
+    dummy.updateMatrix();
+    trees.setMatrixAt(placed++,dummy.matrix);
+  }
+  trees.count=placed;
+  scene.add(trees);
+
+  // ---------------------------------------------------------------------------
+  // Hero rocks close to water. Reflections make them visually useful.
+  // ---------------------------------------------------------------------------
+  function addRock(x,z,sx,sy,sz,color=0x575c58){
+    const g=new THREE.IcosahedronGeometry(1,2);
+    const m=new THREE.MeshStandardMaterial({color,roughness:.82,metalness:.02});
+    const rock=new THREE.Mesh(g,m);
+    const floor=terrainHeight(x,z);
+    rock.position.set(x,Math.max(-.2,floor)+sy*.36,z);
+    rock.scale.set(sx,sy,sz);
+    rock.rotation.set(hash2(x,z)*.35,hash2(z,x)*Math.PI,hash2(x+4,z-8)*.18);
+    rock.castShadow=true;rock.receiveShadow=true;
+    scene.add(rock);
+    return rock;
+  }
+  addRock(-17,-18,5.8,3.5,4.3,0x62635e);
+  addRock(-12,-22,3.0,2.2,2.5,0x494f4b);
+  addRock(20,-34,5.1,3.2,4.0,0x5a605b);
+  addRock(31,-45,7.0,4.8,5.0,0x5b6059);
+
+  // ---------------------------------------------------------------------------
+  // Pier: strong high-contrast object so true reflection is obvious.
+  // ---------------------------------------------------------------------------
+  const woodMat=new THREE.MeshStandardMaterial({color:0x6a4930,roughness:.72});
+  const darkWoodMat=new THREE.MeshStandardMaterial({color:0x3f2e22,roughness:.84});
+
+  function box(w,h,d,x,y,z,mat=woodMat){
+    const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o;
+  }
+
+  // Camera starts on the near shore looking toward negative Z.
+  for(let z=23;z>-7;z-=3.2)box(4.8,.22,3.0,10,.42,z,woodMat);
+  for(let z=23;z>-8;z-=6.4){
+    box(.28,3.0,.28,8.1,-.45,z,darkWoodMat);
+    box(.28,3.0,.28,11.9,-.45,z,darkWoodMat);
+  }
+
+  // Small reflected marker / buoy.
+  const buoyGroup=new THREE.Group();
+  const buoyBody=new THREE.Mesh(
+    new THREE.CylinderGeometry(.42,.58,1.3,20),
+    new THREE.MeshStandardMaterial({color:0xd84b31,roughness:.36,metalness:.04})
+  );
+  buoyBody.position.y=.52;buoyBody.castShadow=true;
+  const buoyTop=new THREE.Mesh(
+    new THREE.SphereGeometry(.35,20,12),
+    new THREE.MeshStandardMaterial({color:0xf1ddbd,roughness:.3})
+  );
+  buoyTop.position.y=1.25;buoyTop.castShadow=true;
+  buoyGroup.add(buoyBody,buoyTop);
+  buoyGroup.position.set(-6,.02,-12);
+  scene.add(buoyGroup);
+
+  // ---------------------------------------------------------------------------
+  // Water normal texture generated inside this HTML.
+  // ---------------------------------------------------------------------------
+  function makeNormalTexture(n=256){
+    const data=new Uint8Array(n*n*4);
+    const TAU=Math.PI*2;
+    let p=0;
+    for(let y=0;y<n;y++){
+      const v=y/n*TAU;
+      for(let x=0;x<n;x++){
+        const u=x/n*TAU;
+
+        // Periodic analytic height field -> seamless normal map.
+        const du=
+          2.0*Math.cos(2*u+v)
+          -0.55*Math.cos(-u+3*v)
+          +1.75*Math.cos(5*u-2*v)
+          +1.40*Math.cos(7*u+6*v);
+
+        const dv=
+          1.0*Math.cos(2*u+v)
+          +1.65*Math.cos(-u+3*v)
+          -0.70*Math.cos(5*u-2*v)
+          +1.20*Math.cos(7*u+6*v);
+
+        const nx=-du*.16,ny=-dv*.16,nz=1;
+        const len=Math.hypot(nx,ny,nz)||1;
+        data[p++]=Math.round((nx/len*.5+.5)*255);
+        data[p++]=Math.round((ny/len*.5+.5)*255);
+        data[p++]=Math.round((nz/len*.5+.5)*255);
+        data[p++]=255;
+      }
+    }
+    const tex=new THREE.DataTexture(data,n,n,THREE.RGBAFormat);
+    tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+    tex.minFilter=THREE.LinearMipmapLinearFilter;
+    tex.magFilter=THREE.LinearFilter;
+    tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+    tex.needsUpdate=true;
+    return tex;
+  }
+
+  const waterNormals=makeNormalTexture(isMobile?128:256);
+  const waterGeometry=new THREE.PlaneGeometry(230,230);
+
+  water=new Water(waterGeometry,{
+    textureWidth:isMobile?512:1024,
+    textureHeight:isMobile?512:1024,
+    clipBias:.00025,
+    alpha:.98,
+    waterNormals,
+    sunDirection:sun.clone().normalize(),
+    sunColor:0xfff0d5,
+    waterColor:0x082d3c,
+    distortionScale:3.7,
+    fog:true
+  });
+  water.rotation.x=-Math.PI/2;
+  water.position.y=.02;
+  water.material.transparent=false;
+  scene.add(water);
+
+  // Water has its own reflected scene; keep it below opaque shoreline geometry
+  // where the terrain rises above lake level.
+  updateSun(false);
+
+  // ---------------------------------------------------------------------------
+  // Controls
+  // ---------------------------------------------------------------------------
+  const waveEl=document.getElementById('wave');
+  const sizeEl=document.getElementById('size');
+  const windEl=document.getElementById('wind');
+  const sunEl=document.getElementById('sun');
+  const waveVal=document.getElementById('waveVal');
+  const sizeVal=document.getElementById('sizeVal');
+  const windVal=document.getElementById('windVal');
+  const sunVal=document.getElementById('sunVal');
+
+  let windSpeed=.75;
+  function syncControls(rebuildSky=false){
+    const distortion=Math.max(0,Math.min(8,Number(waveEl.value)||0));
+    const ripple=Math.max(.2,Math.min(5,Number(sizeEl.value)||1));
+    windSpeed=Math.max(0,Math.min(2.5,Number(windEl.value)||0));
+    sunElevation=Math.max(1,Math.min(45,Number(sunEl.value)||8));
+
+    water.material.uniforms.distortionScale.value=distortion;
+    if(water.material.uniforms.size)water.material.uniforms.size.value=ripple;
+    waveVal.textContent=distortion.toFixed(1);
+    sizeVal.textContent=ripple.toFixed(1);
+    windVal.textContent=windSpeed.toFixed(2);
+    sunVal.textContent=`${Math.round(sunElevation)}°`;
+
+    updateSun(rebuildSky);
+  }
+
+  [waveEl,sizeEl,windEl].forEach(el=>el.addEventListener('input',()=>syncControls(false)));
+  sunEl.addEventListener('input',()=>syncControls(false));
+  sunEl.addEventListener('change',()=>syncControls(true));
+
+  function setPreset(name){
+    if(name==='calm'){
+      waveEl.value='1.7';sizeEl.value='1.8';windEl.value='.28';sunEl.value='15';
+    }else if(name==='windy'){
+      waveEl.value='6.0';sizeEl.value='.65';windEl.value='1.65';sunEl.value='16';
+    }else if(name==='sunset'){
+      waveEl.value='3.5';sizeEl.value='1.0';windEl.value='.65';sunEl.value='4';
+    }
+    syncControls(true);
+  }
+  document.getElementById('calm').addEventListener('click',()=>setPreset('calm'));
+  document.getElementById('windy').addEventListener('click',()=>setPreset('windy'));
+  document.getElementById('sunset').addEventListener('click',()=>setPreset('sunset'));
+
+  let running=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pauseBtn=document.getElementById('pause');
+  if(!running){pauseBtn.textContent='RESUME';pauseBtn.classList.add('on')}
+  pauseBtn.addEventListener('click',()=>{
+    running=!running;
+    pauseBtn.textContent=running?'PAUSE':'RESUME';
+    pauseBtn.classList.toggle('on',!running);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Resize / Loop / lightweight buoy motion
+  // ---------------------------------------------------------------------------
+  function resize(){
+    const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);
+    renderer.setSize(w,h,false);
+    camera.aspect=w/h;
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage);
+  resize();
+
+  let last=performance.now(),waterTime=0,fpsFrames=0,fpsLast=last;
+  const fpsEl=document.getElementById('fps');
+
+  renderer.setAnimationLoop((now)=>{
+    const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
+    if(running){
+      waterTime+=dt*windSpeed;
+      water.material.uniforms.time.value=waterTime;
+
+      // Tiny buoy bob; the water reflection mirrors it.
+      buoyGroup.position.y=.03+Math.sin(waterTime*1.8)*.07+Math.sin(waterTime*.7)*.035;
+      buoyGroup.rotation.z=Math.sin(waterTime*1.15)*.025;
+      buoyGroup.rotation.x=Math.cos(waterTime*.91)*.02;
+    }
+
+    controls.update();
+    renderer.render(scene,camera);
+
+    fpsFrames++;
+    if(now-fpsLast>=700){
+      const fps=fpsFrames*1000/(now-fpsLast);
+      const tri=renderer.info.render.triangles;
+      fpsEl.textContent=`FPS ${fps.toFixed(1)} · ${tri.toLocaleString()} TRI · REFLECT ${isMobile?'512':'1024'}²`;
+      fpsFrames=0;fpsLast=now;
+    }
+  });
+
+  syncControls(false);
+  loading.style.display='none';
+
+}catch(err){
+  console.error(err);
+  loading.style.display='none';
+  errorBox.style.display='block';
+  errorBox.textContent=
+    '初期化に失敗しました。\n\n'+
+    (err?.stack||err?.message||String(err))+
+    '\n\nこの版は Three.js r186 をCDNから読み込むため、初回起動時はネット接続が必要です。';
+}
+</script>
+</body>
+</html>

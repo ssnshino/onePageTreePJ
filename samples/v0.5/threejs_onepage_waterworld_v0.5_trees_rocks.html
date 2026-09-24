@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ONE-PAGE WATER WORLD v0.5 — Trees & Rocks</title>
+<style>
+:root{
+  --panel:rgba(5,12,18,.72);
+  --line:rgba(195,228,242,.28);
+  --text:#eefaff;
+  --muted:#9ab3bf;
+  --accent:#8de8ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071018;color:var(--text);
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#app{position:relative;width:100%;height:100%}
+#stage{position:absolute;inset:0}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.panel{
+  position:absolute;left:10px;top:10px;z-index:10;
+  width:min(420px,calc(100% - 20px));padding:10px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  backdrop-filter:blur(8px);box-shadow:0 10px 30px #0005
+}
+.title{font-weight:800;letter-spacing:.06em;font-size:14px}
+.title b{color:var(--accent)}
+.sub{margin-top:3px;font-size:10px;color:var(--muted);line-height:1.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.ctrl{padding:7px;border:1px solid #bce4f229;border-radius:8px;background:#07182477}
+.ctrl label{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;font-size:10px;color:#d6f1ff}
+.ctrl input{width:100%}
+.buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+button{
+  min-width:0;min-height:38px;padding:6px 3px;border:1px solid var(--line);border-radius:7px;
+  background:#0b1d29;color:var(--text);font:inherit;font-size:9px;cursor:pointer
+}
+button:hover{border-color:var(--accent)}
+button.on{background:var(--accent);border-color:var(--accent);color:#041016;font-weight:800}
+.hud{
+  position:absolute;right:10px;bottom:10px;z-index:10;
+  max-width:min(440px,calc(100% - 20px));padding:8px 10px;
+  border:1px solid var(--line);border-radius:8px;background:rgba(5,12,18,.60);
+  color:#a9c7d5;font-size:9px;line-height:1.55;backdrop-filter:blur(6px)
+}
+.hud strong{color:#fff}.ok{color:#8fffc7}
+.error{
+  position:absolute;left:50%;top:50%;z-index:30;transform:translate(-50%,-50%);
+  width:min(620px,calc(100% - 28px));padding:18px;border:1px solid #ff6f7d;border-radius:10px;
+  background:#260b10;color:#ffdfe3;font-size:12px;line-height:1.65;white-space:pre-wrap;display:none
+}
+.loading{
+  position:absolute;left:50%;top:50%;z-index:20;transform:translate(-50%,-50%);
+  padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#061019cc;
+  color:#d8f5ff;font-size:11px;pointer-events:none
+}
+@media(max-width:640px){
+  .panel{padding:8px}.grid{gap:5px}.ctrl{padding:6px}.buttons{gap:5px}
+  button{font-size:8px;min-height:40px}.hud{font-size:8px}
+}
+</style>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+
+  <section class="panel">
+    <div class="title">ONE-PAGE WATER WORLD <b>v0.5</b></div>
+    <div class="sub">
+      TREES & ROCKS PASS — 水は据え置き。枝構造・樹冠・樹皮、割れ面・凹凸・地衣類まで木と岩へ重点投資。
+      ドラッグで視点回転、ホイール/ピンチでズーム。
+    </div>
+
+    <div class="grid">
+      <div class="ctrl">
+        <label><span>WATER CLARITY</span><b id="clarityVal">0.74</b></label>
+        <input id="clarity" type="range" min="0.35" max="0.92" step="0.01" value="0.74">
+      </div>
+      <div class="ctrl">
+        <label><span>WAVE DISTORTION</span><b id="waveVal">2.20</b></label>
+        <input id="wave" type="range" min="0" max="8" step="0.1" value="2.2">
+      </div>
+      <div class="ctrl">
+        <label><span>WIND SPEED</span><b id="windVal">0.48</b></label>
+        <input id="wind" type="range" min="0" max="2.5" step="0.05" value="0.48">
+      </div>
+      <div class="ctrl">
+        <label><span>SUN ELEVATION</span><b id="sunVal">11°</b></label>
+        <input id="sun" type="range" min="2" max="45" step="1" value="11">
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="pause">PAUSE</button>
+      <button id="glass">GLASS</button>
+      <button id="breeze">BREEZE</button>
+      <button id="sunset">SUNSET</button>
+    </div>
+  </section>
+
+  <div class="hud">
+    <div><strong>WATER</strong> planar reflection + transparency + shallows / deep tint</div>
+    <div><strong>ROCKS</strong> displaced fracture geometry + procedural PBR surface</div>
+    <div><strong>FOREST</strong> real branch skeletons + irregular crowns / instanced prototypes</div>
+    <div><strong>THREE</strong> r186 / CDN module</div>
+    <div id="fps" class="ok">FPS --</div>
+  </div>
+
+  <div id="loading" class="loading">LAKE SHORE INITIALIZING…</div>
+  <div id="error" class="error"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Water } from 'three/addons/objects/Water.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+
+const stage = document.getElementById('stage');
+const loading = document.getElementById('loading');
+const errorBox = document.getElementById('error');
+
+try{
+  const isMobile = matchMedia('(max-width: 700px)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
+
+  // ---------------------------------------------------------------------------
+  // Renderer / Scene / Camera
+  // ---------------------------------------------------------------------------
+  const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobile ? 1.35 : 1.9));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.68;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0xb6c6c8, 0.0059);
+
+  const camera = new THREE.PerspectiveCamera(52, 1, 0.2, 1200);
+  camera.position.set(28, 6.6, 44);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.055;
+  controls.target.set(0, 1.4, -29);
+  controls.minDistance = 7;
+  controls.maxDistance = 120;
+  controls.maxPolarAngle = Math.PI * 0.495;
+
+  // ---------------------------------------------------------------------------
+  // Sky / Environment / Sun
+  // ---------------------------------------------------------------------------
+  const sky = new Sky();
+  sky.scale.setScalar(1000);
+  scene.add(sky);
+
+  const envScene = new THREE.Scene();
+  const envSky = new Sky();
+  envSky.scale.setScalar(1000);
+  envScene.add(envSky);
+
+  function configureSky(mat){
+    const u = mat.uniforms;
+    u.turbidity.value = 7.2;
+    u.rayleigh.value = 2.35;
+    u.mieCoefficient.value = 0.0065;
+    u.mieDirectionalG.value = 0.84;
+  }
+  configureSky(sky.material);
+  configureSky(envSky.material);
+
+  const sun = new THREE.Vector3();
+  let sunElevation = 11;
+  const sunAzimuth = 208;
+
+  const hemi = new THREE.HemisphereLight(0xd8edf4, 0x293126, 0.72);
+  scene.add(hemi);
+
+  const sunLight = new THREE.DirectionalLight(0xffdeb3, 3.1);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(isMobile ? 1024 : 2048, isMobile ? 1024 : 2048);
+  sunLight.shadow.camera.left = -100;
+  sunLight.shadow.camera.right = 100;
+  sunLight.shadow.camera.top = 100;
+  sunLight.shadow.camera.bottom = -100;
+  sunLight.shadow.camera.near = 0.1;
+  sunLight.shadow.camera.far = 320;
+  sunLight.shadow.bias = -0.00032;
+  scene.add(sunLight);
+  scene.add(sunLight.target);
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  let envRT = null;
+  let water = null;
+
+  function sunVector(elev){
+    const phi = THREE.MathUtils.degToRad(90 - elev);
+    const theta = THREE.MathUtils.degToRad(sunAzimuth);
+    return new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
+  }
+
+  function rebuildEnvironment(){
+    if(envRT) envRT.dispose();
+    envRT = pmrem.fromScene(envScene, 0.04, 0.1, 1200, { size:isMobile ? 128 : 256 });
+    scene.environment = envRT.texture;
+  }
+
+  function updateSun(doEnv=true){
+    sun.copy(sunVector(sunElevation));
+    sky.material.uniforms.sunPosition.value.copy(sun);
+    envSky.material.uniforms.sunPosition.value.copy(sun);
+    sunLight.position.copy(sun).multiplyScalar(165);
+    sunLight.target.position.set(0, 0, -30);
+
+    if(water) water.material.uniforms.sunDirection.value.copy(sun).normalize();
+
+    const daylight = THREE.MathUtils.smoothstep(sunElevation, 2, 30);
+    renderer.toneMappingExposure = 0.54 + daylight * 0.26;
+    hemi.intensity = 0.38 + daylight * 0.42;
+    sunLight.intensity = 1.8 + daylight * 2.25;
+    scene.fog.density = 0.0053 + (1 - daylight) * 0.0030;
+
+    if(doEnv) rebuildEnvironment();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Noise helpers / lake shape
+  // ---------------------------------------------------------------------------
+  function hash2(x,z){
+    const s = Math.sin(x*127.1 + z*311.7) * 43758.5453123;
+    return s - Math.floor(s);
+  }
+  function smooth(t){ return t*t*(3 - 2*t); }
+  function noise2(x,z){
+    const xi=Math.floor(x), zi=Math.floor(z), xf=x-xi, zf=z-zi;
+    const a=hash2(xi,zi), b=hash2(xi+1,zi), c=hash2(xi,zi+1), d=hash2(xi+1,zi+1);
+    const u=smooth(xf), v=smooth(zf);
+    return THREE.MathUtils.lerp(THREE.MathUtils.lerp(a,b,u),THREE.MathUtils.lerp(c,d,u),v);
+  }
+  function fbm(x,z){
+    let a=.5, f=1, s=0, n=0;
+    for(let i=0;i<5;i++){
+      s += (noise2(x*f,z*f)*2 - 1) * a;
+      n += a;
+      a *= .5;
+      f *= 2.03;
+    }
+    return s / n;
+  }
+  function lakeRadius(angle, x, z){
+    return 49
+      + Math.sin(angle * 2.0) * 8
+      + Math.sin(angle * 5.1 + 1.2) * 5
+      + fbm(x * .022, z * .022) * 8.2;
+  }
+  function terrainHeight(x,z){
+    const r = Math.hypot(x,z);
+    const ang = Math.atan2(z,x);
+    const shore = lakeRadius(ang,x,z);
+    const d = r - shore;
+    let y;
+    if(d < 0){
+      const t = THREE.MathUtils.clamp((-d)/shore,0,1); // 0 near shore, 1 deep center
+      const bowl = -0.35 - Math.pow(t,1.55)*9.0;
+      const shelf = Math.max(0, 1 - t*1.65) * 0.65; // broad shallow shelf
+      const detail = fbm(x*.055,z*.055)*(.18 + t*.95);
+      y = bowl + shelf + detail;
+    }else{
+      const rise = Math.pow(Math.max(0,d)/41,1.23)*19;
+      const detail = fbm(x*.060,z*.060)*(1.0 + Math.min(7,d*.07));
+      y = -0.15 + rise + detail;
+    }
+    return y;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Terrain mesh with lake-depth-aware colors and wet shoreline band
+  // ---------------------------------------------------------------------------
+  const terrainGeo = new THREE.PlaneGeometry(272, 272, isMobile ? 112 : 162, isMobile ? 112 : 162);
+  terrainGeo.rotateX(-Math.PI/2);
+  const pos = terrainGeo.attributes.position;
+  const colors = [];
+  const cDeepSand = new THREE.Color(0x85755a);
+  const cShallowSand = new THREE.Color(0xc9ba8e);
+  const cWet = new THREE.Color(0x665a44);
+  const cGrass = new THREE.Color(0x5e744a);
+  const cRock = new THREE.Color(0x656860);
+  const cDeepWaterFloor = new THREE.Color(0x4f6d67);
+  const tmp = new THREE.Color();
+
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), z=pos.getZ(i);
+    const y=terrainHeight(x,z);
+    pos.setY(i,y);
+
+    if(y < -5.2){
+      tmp.copy(cDeepWaterFloor);
+    }else if(y < -1.1){
+      tmp.copy(cDeepSand).lerp(cDeepWaterFloor, THREE.MathUtils.clamp((-y-1.1)/5.5,0,1)*0.55);
+    }else if(y < 0.06){
+      const t = THREE.MathUtils.clamp((y + 1.1)/1.16,0,1);
+      tmp.copy(cShallowSand).lerp(cWet, 1-t);
+    }else if(y < 0.85){
+      const t = THREE.MathUtils.clamp(y/0.85,0,1);
+      tmp.copy(cWet).lerp(cGrass, t*0.75);
+    }else if(y < 15){
+      tmp.copy(cGrass);
+    }else{
+      tmp.copy(cRock);
+    }
+
+    // Local variation.
+    const variation = 0.88 + hash2(x*.7,z*.7)*0.22;
+    tmp.multiplyScalar(variation);
+
+    colors.push(tmp.r,tmp.g,tmp.b);
+  }
+  terrainGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  terrainGeo.computeVertexNormals();
+
+  const terrainMat = new THREE.MeshStandardMaterial({
+    vertexColors:true,
+    roughness:0.95,
+    metalness:0.0
+  });
+  const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+  terrain.castShadow = true;
+  terrain.receiveShadow = true;
+  scene.add(terrain);
+
+  // ---------------------------------------------------------------------------
+  // TREES & ROCKS QUALITY PASS
+  // ---------------------------------------------------------------------------
+
+  // Deterministic helpers used by geometry generation.
+  function mulberry32(seed){
+    let a=(seed>>>0)||1;
+    return ()=>{
+      a|=0;a=a+0x6D2B79F5|0;
+      let t=Math.imul(a^a>>>15,1|a);
+      t=t+Math.imul(t^t>>>7,61|t)^t;
+      return ((t^t>>>14)>>>0)/4294967296;
+    };
+  }
+  function hash3(x,y,z){
+    const s=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453123;
+    return s-Math.floor(s);
+  }
+  function noise3(x,y,z){
+    const xi=Math.floor(x), yi=Math.floor(y), zi=Math.floor(z);
+    const xf=x-xi, yf=y-yi, zf=z-zi;
+    const u=smooth(xf), v=smooth(yf), w=smooth(zf);
+    const h=(dx,dy,dz)=>hash3(xi+dx,yi+dy,zi+dz);
+    const x00=THREE.MathUtils.lerp(h(0,0,0),h(1,0,0),u);
+    const x10=THREE.MathUtils.lerp(h(0,1,0),h(1,1,0),u);
+    const x01=THREE.MathUtils.lerp(h(0,0,1),h(1,0,1),u);
+    const x11=THREE.MathUtils.lerp(h(0,1,1),h(1,1,1),u);
+    const y0=THREE.MathUtils.lerp(x00,x10,v);
+    const y1=THREE.MathUtils.lerp(x01,x11,v);
+    return THREE.MathUtils.lerp(y0,y1,w)*2-1;
+  }
+  function fbm3(x,y,z){
+    let a=.55,f=1,s=0,n=0;
+    for(let i=0;i<4;i++){
+      s+=noise3(x*f,y*f,z*f)*a;
+      n+=a;a*=.5;f*=2.07;
+    }
+    return s/n;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Procedural surface maps: no external texture assets.
+  // ---------------------------------------------------------------------------
+  function makeStoneTextures(seed=1,size=256){
+    const colorCanvas=document.createElement('canvas');
+    const bumpCanvas=document.createElement('canvas');
+    colorCanvas.width=colorCanvas.height=bumpCanvas.width=bumpCanvas.height=size;
+    const cc=colorCanvas.getContext('2d'), bc=bumpCanvas.getContext('2d');
+    const ci=cc.createImageData(size,size), bi=bc.createImageData(size,size);
+    const rng=mulberry32(seed*9187+17);
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+      const i=(y*size+x)*4;
+      const n1=fbm((x+seed*31)*.045,(y-seed*19)*.045);
+      const n2=fbm((x-seed*11)*.12,(y+seed*7)*.12);
+      const grain=THREE.MathUtils.clamp(.52+n1*.28+n2*.10,0,1);
+      const lichen=fbm((x+53)*.022,(y-71)*.022)>.18 && noise2(x*.09+seed,y*.09-seed)>.25;
+      let r=92+grain*55, g=91+grain*51, b=84+grain*45;
+      if(lichen){r*=.77;g*=.94;b*=.70;}
+      ci.data[i]=Math.round(r);ci.data[i+1]=Math.round(g);ci.data[i+2]=Math.round(b);ci.data[i+3]=255;
+      const bump=THREE.MathUtils.clamp(125+n1*72+n2*35,12,242);
+      bi.data[i]=bi.data[i+1]=bi.data[i+2]=Math.round(bump);bi.data[i+3]=255;
+    }
+    cc.putImageData(ci,0,0);bc.putImageData(bi,0,0);
+
+    // Fracture lines. Dark in albedo, deeply recessed in bump.
+    for(let k=0;k<18;k++){
+      let x=rng()*size,y=rng()*size;
+      cc.strokeStyle=`rgba(35,32,28,${.16+rng()*.18})`;
+      cc.lineWidth=.7+rng()*1.6;
+      bc.strokeStyle=`rgba(25,25,25,${.48+rng()*.28})`;
+      bc.lineWidth=1+rng()*2.2;
+      cc.beginPath();bc.beginPath();cc.moveTo(x,y);bc.moveTo(x,y);
+      const steps=3+Math.floor(rng()*6);
+      for(let s=0;s<steps;s++){
+        x+=(-18+rng()*36);y+=(-14+rng()*28);
+        cc.lineTo(x,y);bc.lineTo(x,y);
+      }
+      cc.stroke();bc.stroke();
+    }
+
+    const map=new THREE.CanvasTexture(colorCanvas);
+    const bump=new THREE.CanvasTexture(bumpCanvas);
+    map.colorSpace=THREE.SRGBColorSpace;
+    [map,bump].forEach(t=>{
+      t.wrapS=t.wrapT=THREE.RepeatWrapping;
+      t.repeat.set(1.7,1.4);
+      t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+    });
+    return {map,bump};
+  }
+
+  function makeBarkTextures(seed=1,size=256){
+    const colorCanvas=document.createElement('canvas');
+    const bumpCanvas=document.createElement('canvas');
+    colorCanvas.width=colorCanvas.height=bumpCanvas.width=bumpCanvas.height=size;
+    const cc=colorCanvas.getContext('2d'), bc=bumpCanvas.getContext('2d');
+    const ci=cc.createImageData(size,size),bi=bc.createImageData(size,size);
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+      const i=(y*size+x)*4;
+      const vertical=Math.sin(x*.19+noise2(x*.035+seed,y*.012)*3.2);
+      const fine=noise2(x*.10+seed*3,y*.065-seed);
+      const fissure=Math.abs(vertical)>.78 ? -.35 : 0;
+      const v=THREE.MathUtils.clamp(.49+vertical*.10+fine*.10+fissure,0,1);
+      ci.data[i]=Math.round(70+v*60);
+      ci.data[i+1]=Math.round(47+v*42);
+      ci.data[i+2]=Math.round(31+v*28);
+      ci.data[i+3]=255;
+      const b=THREE.MathUtils.clamp(125+vertical*55+fine*35+fissure*130,8,245);
+      bi.data[i]=bi.data[i+1]=bi.data[i+2]=Math.round(b);bi.data[i+3]=255;
+    }
+    cc.putImageData(ci,0,0);bc.putImageData(bi,0,0);
+    const map=new THREE.CanvasTexture(colorCanvas),bump=new THREE.CanvasTexture(bumpCanvas);
+    map.colorSpace=THREE.SRGBColorSpace;
+    [map,bump].forEach(t=>{
+      t.wrapS=t.wrapT=THREE.RepeatWrapping;
+      t.repeat.set(1.1,4.2);
+      t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+    });
+    return {map,bump};
+  }
+
+  const stoneTexA=makeStoneTextures(11), stoneTexB=makeStoneTextures(29);
+  const rockMatA=new THREE.MeshStandardMaterial({map:stoneTexA.map,bumpMap:stoneTexA.bump,bumpScale:.16,roughness:.91,metalness:0});
+  const rockMatB=new THREE.MeshStandardMaterial({map:stoneTexB.map,bumpMap:stoneTexB.bump,bumpScale:.12,roughness:.94,metalness:0,color:0xc2beb3});
+  const underwaterRockMat=new THREE.MeshStandardMaterial({map:stoneTexA.map,bumpMap:stoneTexA.bump,bumpScale:.08,roughness:.97,metalness:0,color:0x8b8e79});
+
+  const barkTex=makeBarkTextures(7);
+  const treeBarkMat=new THREE.MeshStandardMaterial({
+    map:barkTex.map,bumpMap:barkTex.bump,bumpScale:.075,roughness:.96,metalness:0,color:0xffffff
+  });
+  const treeLeafMat=new THREE.MeshStandardMaterial({
+    color:0xffffff,roughness:.91,metalness:0,envMapIntensity:.72
+  });
+
+  // ---------------------------------------------------------------------------
+  // Fractured boulder geometry. Starts from a sphere but is deliberately cut by
+  // several virtual fracture planes, then receives multi-scale displacement.
+  // ---------------------------------------------------------------------------
+  function createBoulderGeometry(seed=1,detail=3){
+    let g=new THREE.IcosahedronGeometry(1,detail);
+    const p=g.attributes.position;
+    const rng=mulberry32(seed*9127+31);
+    const planes=[];
+    for(let i=0;i<5;i++){
+      const v=new THREE.Vector3(rng()*2-1,rng()*2-1,rng()*2-1).normalize();
+      planes.push({n:v,threshold:.52+rng()*.19,strength:.10+rng()*.15});
+    }
+    const shearX=(rng()-.5)*.18,shearZ=(rng()-.5)*.14;
+    for(let i=0;i<p.count;i++){
+      let x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+      const n=new THREE.Vector3(x,y,z).normalize();
+      let radial=1 + fbm3(n.x*2.8+seed*.7,n.y*2.8-seed*.3,n.z*2.8+seed*.2)*.22;
+      radial += fbm3(n.x*8.5-seed,n.y*8.5+seed,n.z*8.5)*.055;
+      for(const pl of planes){
+        const d=n.dot(pl.n);
+        if(d>pl.threshold) radial -= (d-pl.threshold)*pl.strength*2.2;
+      }
+      x=n.x*radial; y=n.y*radial; z=n.z*radial;
+      x+=y*shearX; z+=y*shearZ;
+      y*=.82+rng()*.002;
+      // Boulders sit *in* the ground instead of floating like potatoes.
+      if(y<-.47)y=-.47+(y+.47)*.18;
+      p.setXYZ(i,x,y,z);
+    }
+    p.needsUpdate=true;
+    g.computeVertexNormals();
+    g=BufferGeometryUtils.toCreasedNormals(g,THREE.MathUtils.degToRad(48));
+    g.computeBoundingSphere();
+    return g;
+  }
+
+  const heroRockGeos=[createBoulderGeometry(3,3),createBoulderGeometry(7,3),createBoulderGeometry(13,3),createBoulderGeometry(21,3)];
+  const smallRockGeos=[createBoulderGeometry(5,1),createBoulderGeometry(17,1)];
+
+  function placeBoulder(x,z,sx,sy,sz,seed=1,mat=null,sink=.28){
+    const geo=heroRockGeos[Math.abs(seed)%heroRockGeos.length];
+    const mesh=new THREE.Mesh(geo,mat || (seed%2?rockMatA:rockMatB));
+    const floor=terrainHeight(x,z);
+    mesh.position.set(x,floor + sy*(.48-sink),z);
+    mesh.scale.set(sx,sy,sz);
+    mesh.rotation.set((hash2(seed,2)-.5)*.18,hash2(seed,4)*Math.PI*2,(hash2(seed,8)-.5)*.14);
+    mesh.castShadow=true;mesh.receiveShadow=true;
+    scene.add(mesh);
+    return mesh;
+  }
+
+  function addRockCluster(cx,cz,scale,seed){
+    placeBoulder(cx,cz,scale*1.00,scale*.64,scale*.80,seed,seed%2?rockMatA:rockMatB,.34);
+    const rng=mulberry32(seed*7717);
+    const count=2+Math.floor(rng()*3);
+    for(let i=0;i<count;i++){
+      const a=rng()*Math.PI*2,r=scale*(.55+rng()*.65),s=scale*(.25+rng()*.42);
+      placeBoulder(cx+Math.cos(a)*r,cz+Math.sin(a)*r,s*(.9+rng()*.5),s*(.55+rng()*.35),s*(.75+rng()*.45),seed*13+i, i%2?rockMatA:rockMatB,.43);
+    }
+  }
+
+  // Natural outcrops instead of solitary perfect blobs.
+  addRockCluster(-17,-18,4.5,3);
+  addRockCluster(20,-34,4.0,7);
+  addRockCluster(31,-45,5.0,13);
+  addRockCluster(-35,-43,5.4,21);
+
+  // Underwater rocks use instancing and the same geological language.
+  const underCount=isMobile?22:42;
+  const underA=new THREE.InstancedMesh(smallRockGeos[0],underwaterRockMat,underCount);
+  const underB=new THREE.InstancedMesh(smallRockGeos[1],underwaterRockMat,underCount);
+  underA.castShadow=underB.castShadow=false;underA.receiveShadow=underB.receiveShadow=true;
+  const dummyRock=new THREE.Object3D();let ua=0,ub=0;
+  for(let i=0;i<underCount*4 && ua+ub<underCount;i++){
+    const a=hash2(i,77)*Math.PI*2,r=9+hash2(i,17)*29;
+    const x=Math.cos(a)*r,z=Math.sin(a)*r,y=terrainHeight(x,z);
+    if(y>-.65)continue;
+    const s=.25+hash2(i,29)*1.0;
+    dummyRock.position.set(x,y+s*.12,z);
+    dummyRock.rotation.set(hash2(i,9)*.7,hash2(i,21)*Math.PI*2,hash2(i,41)*.6);
+    dummyRock.scale.set(s*(.85+hash2(i,5)*.65),s*(.40+hash2(i,6)*.35),s*(.70+hash2(i,7)*.55));
+    dummyRock.updateMatrix();
+    if((i&1)===0 && ua<underCount){underA.setMatrixAt(ua++,dummyRock.matrix)}
+    else if(ub<underCount){underB.setMatrixAt(ub++,dummyRock.matrix)}
+  }
+  underA.count=ua;underB.count=ub;underA.instanceMatrix.needsUpdate=true;underB.instanceMatrix.needsUpdate=true;
+  scene.add(underA,underB);
+
+  // Shore stones: irregular boulder instances, sunk into the wet band.
+  const shoreCount=isMobile?48:90;
+  const shoreA=new THREE.InstancedMesh(smallRockGeos[0],rockMatA,shoreCount);
+  const shoreB=new THREE.InstancedMesh(smallRockGeos[1],rockMatB,shoreCount);
+  shoreA.castShadow=shoreB.castShadow=true;shoreA.receiveShadow=shoreB.receiveShadow=true;
+  let sa=0,sb=0;
+  for(let i=0;i<shoreCount*3 && sa+sb<shoreCount;i++){
+    const ang=i/shoreCount*Math.PI*2+hash2(i,3)*.10;
+    const shore=lakeRadius(ang,Math.cos(ang)*50,Math.sin(ang)*50);
+    const radius=shore+(-1.8+hash2(i,17)*3.8);
+    const x=Math.cos(ang)*radius,z=Math.sin(ang)*radius,y=terrainHeight(x,z);
+    if(y<-.72||y>1.15)continue;
+    const s=.09+hash2(i,29)*.42;
+    dummyRock.position.set(x,y+s*.02,z);
+    dummyRock.rotation.set(hash2(i,41)*.7,hash2(i,57)*Math.PI*2,hash2(i,61)*.55);
+    dummyRock.scale.set(s*(.9+hash2(i,4)*.75),s*(.36+hash2(i,5)*.38),s*(.72+hash2(i,6)*.60));
+    dummyRock.updateMatrix();
+    if((i&1)===0 && sa<shoreCount)shoreA.setMatrixAt(sa++,dummyRock.matrix);
+    else if(sb<shoreCount)shoreB.setMatrixAt(sb++,dummyRock.matrix);
+  }
+  shoreA.count=sa;shoreB.count=sb;shoreA.instanceMatrix.needsUpdate=true;shoreB.instanceMatrix.needsUpdate=true;
+  scene.add(shoreA,shoreB);
+
+  // ---------------------------------------------------------------------------
+  // Tree geometry builders
+  // ---------------------------------------------------------------------------
+  const Y_AXIS=new THREE.Vector3(0,1,0),X_AXIS=new THREE.Vector3(1,0,0);
+
+  function cylinderBetween(a,b,r0,r1,radial=7){
+    const d=new THREE.Vector3().subVectors(b,a),len=d.length();
+    const g=new THREE.CylinderGeometry(r1,r0,len,radial,1,false).toNonIndexed();
+    const q=new THREE.Quaternion().setFromUnitVectors(Y_AXIS,d.clone().normalize());
+    g.applyQuaternion(q);
+    g.translate((a.x+b.x)*.5,(a.y+b.y)*.5,(a.z+b.z)*.5);
+    return g;
+  }
+
+  function irregularCrownGeometry(center,scale,seed,elongateDir=null){
+    const rng=mulberry32(seed*7919+13);
+    let g=new THREE.IcosahedronGeometry(1,1).toNonIndexed();
+    const p=g.attributes.position;
+    for(let i=0;i<p.count;i++){
+      let x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+      const n=new THREE.Vector3(x,y,z).normalize();
+      const k=1+fbm3(n.x*3+seed,n.y*3-seed*.4,n.z*3+seed*.2)*.16;
+      p.setXYZ(i,x*k,y*k,z*k);
+    }
+    p.needsUpdate=true;g.computeVertexNormals();
+    g.scale(scale.x,scale.y,scale.z);
+    if(elongateDir){
+      const q=new THREE.Quaternion().setFromUnitVectors(X_AXIS,elongateDir.clone().normalize());
+      g.applyQuaternion(q);
+    }else{
+      g.rotateY(rng()*Math.PI*2);g.rotateX((rng()-.5)*.35);g.rotateZ((rng()-.5)*.35);
+    }
+    g.translate(center.x,center.y,center.z);
+    return g;
+  }
+
+  function mergeParts(parts){
+    const valid=parts.filter(Boolean);
+    if(!valid.length)return new THREE.BufferGeometry();
+    const merged=BufferGeometryUtils.mergeGeometries(valid,false);
+    valid.forEach(g=>g.dispose());
+    merged.computeBoundingSphere();
+    return merged;
+  }
+
+  function buildBroadleafPrototype(seed=1){
+    const rng=mulberry32(seed*911+17);
+    const wood=[],leaves=[];
+    const totalH=5.6+rng()*1.0;
+    const lean=new THREE.Vector3((rng()-.5)*.38,0,(rng()-.5)*.38);
+
+    let prev=new THREE.Vector3(0,0,0);
+    const trunkPts=[prev.clone()];
+    const segs=6;
+    for(let i=1;i<=segs;i++){
+      const y=totalH*i/segs;
+      const next=new THREE.Vector3(lean.x*i/segs+(rng()-.5)*.08,y,lean.z*i/segs+(rng()-.5)*.08);
+      const r0=.31*(1-(i-1)/segs*.63),r1=.31*(1-i/segs*.63);
+      wood.push(cylinderBetween(prev,next,r0,r1,8));
+      prev=next;trunkPts.push(next.clone());
+    }
+
+    const branchCount=13;
+    for(let b=0;b<branchCount;b++){
+      const t=.23+rng()*.62;
+      const y=totalH*t;
+      const base=new THREE.Vector3(lean.x*t,y,lean.z*t);
+      const ang=b*2.399963+rng()*.45;
+      const len1=1.15+rng()*1.45*(1-t*.30);
+      const up=.22+rng()*.35;
+      const dir1=new THREE.Vector3(Math.cos(ang),up,Math.sin(ang)).normalize();
+      const mid=base.clone().addScaledVector(dir1,len1);
+      wood.push(cylinderBetween(base,mid,.095*(1-t*.35),.045,6));
+
+      const bend=ang+(rng()-.5)*.55;
+      const dir2=new THREE.Vector3(Math.cos(bend),.30+rng()*.34,Math.sin(bend)).normalize();
+      const tip=mid.clone().addScaledVector(dir2,.65+rng()*1.05);
+      wood.push(cylinderBetween(mid,tip,.050,.018,5));
+
+      if(rng()<.72){
+        const twigDir=new THREE.Vector3(Math.cos(bend+(.7+rng()*.9)),.38+rng()*.36,Math.sin(bend+(.7+rng()*.9))).normalize();
+        const twig=mid.clone().addScaledVector(twigDir,.42+rng()*.65);
+        wood.push(cylinderBetween(mid,twig,.034,.011,5));
+        leaves.push(irregularCrownGeometry(twig,new THREE.Vector3(.48+rng()*.30,.40+rng()*.30,.48+rng()*.28),seed*100+b*7+1));
+      }
+
+      leaves.push(irregularCrownGeometry(tip,new THREE.Vector3(.68+rng()*.42,.55+rng()*.42,.68+rng()*.38),seed*100+b*7+2));
+      leaves.push(irregularCrownGeometry(mid.clone().lerp(tip,.62),new THREE.Vector3(.52+rng()*.30,.44+rng()*.30,.52+rng()*.30),seed*100+b*7+3));
+    }
+
+    // Break the "ball on a stick" crown with several independent top masses.
+    const top=trunkPts[trunkPts.length-1];
+    for(let i=0;i<7;i++){
+      const a=rng()*Math.PI*2,r=.18+rng()*.85;
+      const c=top.clone().add(new THREE.Vector3(Math.cos(a)*r,(rng()-.2)*.8,Math.sin(a)*r));
+      leaves.push(irregularCrownGeometry(c,new THREE.Vector3(.55+rng()*.38,.48+rng()*.36,.55+rng()*.38),seed*500+i));
+    }
+    return {wood:mergeParts(wood),leaves:mergeParts(leaves)};
+  }
+
+  function buildConiferPrototype(seed=1){
+    const rng=mulberry32(seed*1237+29);
+    const wood=[],leaves=[];
+    const totalH=6.3+rng()*1.3;
+    let prev=new THREE.Vector3(0,0,0);
+    const leanX=(rng()-.5)*.18,leanZ=(rng()-.5)*.18;
+    for(let i=1;i<=5;i++){
+      const y=totalH*i/5,next=new THREE.Vector3(leanX*i/5,y,leanZ*i/5);
+      wood.push(cylinderBetween(prev,next,.24*(1-(i-1)*.12),.24*(1-i*.12),7));
+      prev=next;
+    }
+
+    const tiers=11;
+    for(let t=0;t<tiers;t++){
+      const frac=(t+1)/(tiers+1);
+      const y=.75+frac*(totalH-1.1);
+      const base=new THREE.Vector3(leanX*y/totalH,y,leanZ*y/totalH);
+      const branchLen=(2.15*(1-frac*.70))*(.86+rng()*.25);
+      const branches=t<3?5:4;
+      const offset=rng()*Math.PI*.45+t*.43;
+      for(let j=0;j<branches;j++){
+        const a=offset+j/branches*Math.PI*2;
+        const d1=new THREE.Vector3(Math.cos(a),-.10+rng()*.13,Math.sin(a)).normalize();
+        const mid=base.clone().addScaledVector(d1,branchLen*.62);
+        const d2=new THREE.Vector3(Math.cos(a+(rng()-.5)*.12),.02+rng()*.14,Math.sin(a+(rng()-.5)*.12)).normalize();
+        const tip=mid.clone().addScaledVector(d2,branchLen*.43);
+        wood.push(cylinderBetween(base,mid,.052*(1-frac*.45),.024,5));
+        wood.push(cylinderBetween(mid,tip,.026,.008,5));
+
+        const dir=tip.clone().sub(base).normalize();
+        const s1=.36+branchLen*.16;
+        leaves.push(irregularCrownGeometry(base.clone().lerp(tip,.58),new THREE.Vector3(s1,.20+.15*(1-frac),.32+.13*(1-frac)),seed*1000+t*31+j*3,dir));
+        leaves.push(irregularCrownGeometry(base.clone().lerp(tip,.88),new THREE.Vector3(s1*.72,.17+.10*(1-frac),.27+.10*(1-frac)),seed*1000+t*31+j*3+1,dir));
+      }
+    }
+    // Irregular leader at the crown.
+    for(let i=0;i<5;i++){
+      const y=totalH-1.25+i*.27;
+      const c=new THREE.Vector3(leanX*y/totalH,y,leanZ*y/totalH);
+      leaves.push(irregularCrownGeometry(c,new THREE.Vector3(.52-i*.06,.42-i*.045,.52-i*.06),seed*4000+i));
+    }
+    return {wood:mergeParts(wood),leaves:mergeParts(leaves)};
+  }
+
+  const treePrototypes=[
+    buildBroadleafPrototype(3),buildBroadleafPrototype(11),
+    buildConiferPrototype(5),buildConiferPrototype(17)
+  ];
+  const treePlacements=treePrototypes.map(()=>[]);
+
+  // A few intentionally well-framed shoreline trees, then a restrained forest.
+  const heroTrees=[[-42,28,1,1.15],[42,24,0,1.08],[-48,-5,2,1.10],[45,-10,3,1.03]];
+  for(const [x,z,proto,s] of heroTrees){
+    const y=terrainHeight(x,z);
+    if(y>1&&y<17)treePlacements[proto].push({x,y,z,s,rot:hash2(x,z)*Math.PI*2});
+  }
+
+  const totalTrees=isMobile?48:88;
+  let placed=0;
+  for(let i=0;i<totalTrees*25&&placed<totalTrees;i++){
+    const a=hash2(i,91)*Math.PI*2;
+    const r=54+hash2(i,33)*62;
+    const x=Math.cos(a)*r,z=Math.sin(a)*r,y=terrainHeight(x,z);
+    if(y<1.0||y>16.5)continue;
+    const proto=Math.floor(hash2(i,123)*treePrototypes.length)%treePrototypes.length;
+    const s=.70+hash2(i,55)*.92;
+    treePlacements[proto].push({x,y,z,s,rot:hash2(i,71)*Math.PI*2});
+    placed++;
+  }
+
+  const treeInstances=[];
+  const dummyTree=new THREE.Object3D();
+  const leafPalette=[new THREE.Color(0x365d3e),new THREE.Color(0x456b45),new THREE.Color(0x31533a),new THREE.Color(0x536f45)];
+  for(let pidx=0;pidx<treePrototypes.length;pidx++){
+    const proto=treePrototypes[pidx],rows=treePlacements[pidx];
+    if(!rows.length)continue;
+    const wood=new THREE.InstancedMesh(proto.wood,treeBarkMat,rows.length);
+    const leaves=new THREE.InstancedMesh(proto.leaves,treeLeafMat,rows.length);
+    wood.castShadow=wood.receiveShadow=true;leaves.castShadow=leaves.receiveShadow=true;
+    for(let i=0;i<rows.length;i++){
+      const t=rows[i];
+      dummyTree.position.set(t.x,t.y,t.z);
+      dummyTree.rotation.set(0,t.rot,0);
+      dummyTree.scale.setScalar(t.s);
+      dummyTree.updateMatrix();
+      wood.setMatrixAt(i,dummyTree.matrix);leaves.setMatrixAt(i,dummyTree.matrix);
+      const barkTint=new THREE.Color().setHSL(.07+hash2(i,pidx)*.025,.22,.32+hash2(i+2,pidx)*.08);
+      wood.setColorAt(i,barkTint);
+      const base=leafPalette[Math.floor(hash2(i+9,pidx+2)*leafPalette.length)%leafPalette.length].clone();
+      base.offsetHSL((hash2(i,pidx+11)-.5)*.035,(hash2(i+3,pidx)-.5)*.08,(hash2(i+8,pidx)-.5)*.07);
+      leaves.setColorAt(i,base);
+    }
+    wood.instanceMatrix.needsUpdate=true;leaves.instanceMatrix.needsUpdate=true;
+    if(wood.instanceColor)wood.instanceColor.needsUpdate=true;
+    if(leaves.instanceColor)leaves.instanceColor.needsUpdate=true;
+    scene.add(wood,leaves);treeInstances.push(wood,leaves);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reeds / grass clumps near shore
+  // ---------------------------------------------------------------------------
+  const reedMat = new THREE.MeshStandardMaterial({ color:0x6e7f47, roughness:1.0 });
+  function addReedClump(x,z,scale=1){
+    const baseY = terrainHeight(x,z);
+    if(baseY < -0.25 || baseY > 0.9) return;
+    const g = new THREE.Group();
+    const count = 6 + Math.floor(hash2(x,z)*7);
+    for(let i=0;i<count;i++){
+      const h = (0.45 + hash2(x+i*0.3,z-i*0.2)*0.7) * scale;
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.024,h,4), reedMat);
+      const offA = hash2(i,x)*Math.PI*2;
+      const offR = hash2(z,i)*0.12*scale;
+      stem.position.set(Math.cos(offA)*offR, h*0.5, Math.sin(offA)*offR);
+      stem.rotation.z = (hash2(i+3,z+9)-0.5)*0.18;
+      stem.rotation.x = (hash2(i+5,x+7)-0.5)*0.12;
+      stem.castShadow = true;
+      stem.receiveShadow = true;
+      g.add(stem);
+    }
+    g.position.set(x, baseY, z);
+    scene.add(g);
+  }
+  const reedSamples = isMobile ? 65 : 120;
+  for(let i=0;i<reedSamples;i++){
+    const ang = hash2(i,71)*Math.PI*2;
+    const shore = lakeRadius(ang, Math.cos(ang)*50, Math.sin(ang)*50);
+    const radius = shore + (-0.9 + hash2(i,19)*2.4);
+    const x = Math.cos(ang)*radius;
+    const z = Math.sin(ang)*radius;
+    addReedClump(x,z,0.8 + hash2(i,25)*0.8);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pier + buoy
+  // ---------------------------------------------------------------------------
+  const woodMat = new THREE.MeshStandardMaterial({ color:0x6a4930, roughness:0.72 });
+  const darkWoodMat = new THREE.MeshStandardMaterial({ color:0x3f2e22, roughness:0.84 });
+
+  function box(w,h,d,x,y,z,mat=woodMat){
+    const o = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    o.position.set(x,y,z);
+    o.castShadow = true; o.receiveShadow = true;
+    scene.add(o); return o;
+  }
+  for(let z=23;z>-7;z-=3.2) box(4.8,0.22,3.0,10,0.42,z,woodMat);
+  for(let z=23;z>-8;z-=6.4){
+    box(0.28,3.0,0.28,8.1,-0.45,z,darkWoodMat);
+    box(0.28,3.0,0.28,11.9,-0.45,z,darkWoodMat);
+  }
+
+  const buoyGroup = new THREE.Group();
+  const buoyBody = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.42,0.58,1.3,20),
+    new THREE.MeshStandardMaterial({ color:0xd84b31, roughness:0.36, metalness:0.04 })
+  );
+  buoyBody.position.y = 0.52; buoyBody.castShadow = true;
+  const buoyTop = new THREE.Mesh(
+    new THREE.SphereGeometry(0.35,20,12),
+    new THREE.MeshStandardMaterial({ color:0xf1ddbd, roughness:0.30 })
+  );
+  buoyTop.position.y = 1.25; buoyTop.castShadow = true;
+  buoyGroup.add(buoyBody, buoyTop);
+  buoyGroup.position.set(-6,0.02,-12);
+  scene.add(buoyGroup);
+
+  // ---------------------------------------------------------------------------
+  // Water normal texture
+  // ---------------------------------------------------------------------------
+  function makeNormalTexture(n=256){
+    const data = new Uint8Array(n*n*4);
+    const TAU = Math.PI*2;
+    let p = 0;
+    for(let y=0;y<n;y++){
+      const v = y/n*TAU;
+      for(let x=0;x<n;x++){
+        const u = x/n*TAU;
+        const du = 2.0*Math.cos(2*u+v) - 0.55*Math.cos(-u+3*v) + 1.75*Math.cos(5*u-2*v) + 1.4*Math.cos(7*u+6*v);
+        const dv = 1.0*Math.cos(2*u+v) + 1.65*Math.cos(-u+3*v) - 0.70*Math.cos(5*u-2*v) + 1.2*Math.cos(7*u+6*v);
+        const nx = -du*0.16, ny = -dv*0.16, nz = 1;
+        const len = Math.hypot(nx,ny,nz) || 1;
+        data[p++] = Math.round((nx/len*0.5+0.5)*255);
+        data[p++] = Math.round((ny/len*0.5+0.5)*255);
+        data[p++] = Math.round((nz/len*0.5+0.5)*255);
+        data[p++] = 255;
+      }
+    }
+    const tex = new THREE.DataTexture(data,n,n,THREE.RGBAFormat);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shallow "caustics-ish" moving light on lakebed
+  // ---------------------------------------------------------------------------
+  function makeCausticTexture(size=256){
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0,0,size,size);
+    for(let i=0;i<240;i++){
+      const x=Math.random()*size, y=Math.random()*size, r=12+Math.random()*30;
+      const g=ctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,'rgba(255,255,255,.20)');
+      g.addColorStop(.45,'rgba(255,255,255,.07)');
+      g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fill();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  const waterNormals = makeNormalTexture(isMobile ? 128 : 256);
+  const waterGeometry = new THREE.PlaneGeometry(232,232);
+
+  water = new Water(waterGeometry,{
+    textureWidth:isMobile ? 512 : 1024,
+    textureHeight:isMobile ? 512 : 1024,
+    clipBias:0.00025,
+    alpha:0.74,
+    waterNormals,
+    sunDirection:sun.clone().normalize(),
+    sunColor:0xfff2da,
+    waterColor:0x0d6164,
+    distortionScale:2.2,
+    fog:true
+  });
+  water.rotation.x = -Math.PI/2;
+  water.position.y = 0.03;
+  water.material.transparent = true;
+  water.material.depthWrite = false;
+  water.renderOrder = 3;
+  scene.add(water);
+
+  const causticsTex = makeCausticTexture();
+  const causticsMat = new THREE.MeshBasicMaterial({
+    map:causticsTex,
+    transparent:true,
+    opacity:0.19,
+    blending:THREE.AdditiveBlending,
+    depthWrite:false,
+    toneMapped:false
+  });
+  const caustics = new THREE.Mesh(new THREE.PlaneGeometry(96,96), causticsMat);
+  caustics.rotation.x = -Math.PI/2;
+  caustics.position.y = -1.15;
+  caustics.renderOrder = 1;
+  scene.add(caustics);
+
+  // ---------------------------------------------------------------------------
+  // Sun / environment now that water exists
+  // ---------------------------------------------------------------------------
+  updateSun(true);
+
+  // ---------------------------------------------------------------------------
+  // Controls
+  // ---------------------------------------------------------------------------
+  const clarityEl = document.getElementById('clarity');
+  const waveEl = document.getElementById('wave');
+  const windEl = document.getElementById('wind');
+  const sunEl = document.getElementById('sun');
+  const clarityVal = document.getElementById('clarityVal');
+  const waveVal = document.getElementById('waveVal');
+  const windVal = document.getElementById('windVal');
+  const sunVal = document.getElementById('sunVal');
+
+  let windSpeed = 0.48;
+  let clarity = 0.74;
+
+  function syncControls(doEnv=false){
+    clarity = Math.max(0.35, Math.min(0.92, Number(clarityEl.value) || 0.74));
+    const distortion = Math.max(0, Math.min(8, Number(waveEl.value) || 0));
+    windSpeed = Math.max(0, Math.min(2.5, Number(windEl.value) || 0));
+    sunElevation = Math.max(2, Math.min(45, Number(sunEl.value) || 11));
+
+    if(water.material.uniforms.alpha) water.material.uniforms.alpha.value = clarity;
+    water.material.uniforms.distortionScale.value = distortion;
+
+    // Clearer water -> more turquoise and slightly less milky.
+    const waterColor = new THREE.Color().lerpColors(
+      new THREE.Color(0x083d43),
+      new THREE.Color(0x159091),
+      (clarity - 0.35)/(0.92 - 0.35)
+    );
+    water.material.uniforms.waterColor.value.copy(waterColor);
+
+    clarityVal.textContent = clarity.toFixed(2);
+    waveVal.textContent = distortion.toFixed(2);
+    windVal.textContent = windSpeed.toFixed(2);
+    sunVal.textContent = `${Math.round(sunElevation)}°`;
+
+    // Brighter, broader bottom shimmer when clear.
+    caustics.material.opacity = 0.05 + (clarity - 0.35)/(0.92 - 0.35) * 0.21;
+    updateSun(doEnv);
+  }
+
+  function setPreset(name){
+    if(name==='glass'){
+      clarityEl.value='0.88';
+      waveEl.value='1.1';
+      windEl.value='0.10';
+      sunEl.value='14';
