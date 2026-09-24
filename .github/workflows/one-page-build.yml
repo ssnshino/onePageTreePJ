@@ -1,0 +1,24 @@
+name: one-page build
+
+on:
+  push:
+    branches:
+      - refactor/source-split-build-system
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: one-page-html
+          path: dist/threejs_onepage_waterworld_v0.6_hero_tree_prototype_01.html
+          if-no-files-found: error
+      - run: npm run verify

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ONE-PAGE WATER WORLD v0.6 — Hero Tree Prototype 01 BUNDLED</title>
+<style>
+/*__INLINE_CSS__*/
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+
+  <section class="panel">
+    <div class="title">ONE-PAGE WATER WORLD <b>v0.6 HERO TREE</b></div>
+    <div class="sub">
+      HERO TREE PROTOTYPE 01 — 水・山・岩は据え置き。まず一本の老巨木を、近景観賞に耐える自然物として成立させる。
+      ドラッグで視点回転、ホイール/ピンチでズーム。
+    </div>
+
+    <div class="grid">
+      <div class="ctrl">
+        <label><span>WATER CLARITY</span><b id="clarityVal">0.74</b></label>
+        <input id="clarity" type="range" min="0.35" max="0.92" step="0.01" value="0.74">
+      </div>
+      <div class="ctrl">
+        <label><span>WAVE DISTORTION</span><b id="waveVal">2.20</b></label>
+        <input id="wave" type="range" min="0" max="8" step="0.1" value="2.2">
+      </div>
+      <div class="ctrl">
+        <label><span>WIND SPEED</span><b id="windVal">0.48</b></label>
+        <input id="wind" type="range" min="0" max="2.5" step="0.05" value="0.48">
+      </div>
+      <div class="ctrl">
+        <label><span>SUN ELEVATION</span><b id="sunVal">11°</b></label>
+        <input id="sun" type="range" min="2" max="45" step="1" value="11">
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="pause">PAUSE</button>
+      <button id="glass">GLASS</button>
+      <button id="breeze">BREEZE</button>
+      <button id="sunset">SUNSET</button>
+    </div>
+  </section>
+
+  <div class="hud">
+    <div><strong>WATER</strong> planar reflection + transparency + shallows / deep tint</div>
+    <div><strong>ROCKS</strong> displaced fracture geometry + procedural PBR surface</div>
+    <div><strong>HERO TREE</strong> tapered swept branches + exposed roots + alpha-cutout foliage cards</div>
+    <div><strong>THREE</strong> r186 bundled / one-page build</div>
+    <div id="fps" class="ok">FPS --</div>
+  </div>
+
+  <div id="loading" class="loading">LAKE SHORE INITIALIZING…</div>
+  <div id="error" class="error"></div>
+</div>
+
+<script>
+/*__INLINE_JS__*/
+</script>
+</body>
+</html>

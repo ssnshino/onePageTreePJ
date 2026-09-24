@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-24T11:14:00+09:00
+Updated: 2026-09-24T12:32:00+09:00
 
 ## Session Summary
 
@@ -82,3 +82,33 @@ The Hero Tree candidate was repackaged for direct `file://` execution:
 - static combined-JS parse PASS
 
 Next action: smartphone local-file retest.
+
+## Build System / Source Split Run
+
+A new stacked branch `refactor/source-split-build-system` was created before Hero Tree Prototype 02.
+
+Key change:
+**one-page is now treated as a distribution format, not a source-code format.**
+
+Implemented:
+- `src/` development source
+- 10 ordered JavaScript fragments
+- separate CSS/template
+- Three.js `0.186.0` npm dependency
+- esbuild `0.28.2`
+- one-page IIFE build
+- static dist verifier
+- GitHub Actions artifact build
+
+CI initially exposed an HTML inlining bug caused by JavaScript `String.replace()` replacement-string semantics. The build was corrected to use function replacement and preserve minified JS literally.
+
+Final CI:
+- GitHub Actions run `35953170260`
+- build PASS
+- verify PASS
+- output approximately 605.5 KiB
+
+Agent-side headless Chromium could not initialize WebGL/EGL, so visual review remains Human authority.
+
+Next:
+download the r186 bundled one-page artifact, test smartphone local-file execution, then begin Hero Tree Prototype 02 on the split-source architecture.
