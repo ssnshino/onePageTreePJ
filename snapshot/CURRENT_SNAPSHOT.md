@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-24T10:03:46+09:00
+Updated: 2026-09-24T11:14:00+09:00
 
 ## Repository State
 
@@ -55,3 +55,24 @@ Focus:
 
 - 2026-09-24T09:39:00+09:00 — ChatGPT — Initial snapshot created from v0.1-v0.5 research session.
 - 2026-09-24T10:03:46+09:00 — ChatGPT — PR #1 merge confirmed; repository is now canonical. Next-chat handoff updated for dedicated v0.6 research.
+
+## Active Candidate — Hero Tree Prototype 01
+
+- Branch: `feature/v0.6-hero-tree-prototype-01`
+- Candidate HTML: `threejs_onepage_waterworld_v0.6_hero_tree_prototype_01.html`
+- Scope: one near-view old broadleaf tree only
+- Static syntax: PASS
+- Human browser / real-device visual review: PENDING
+- Stable baseline remains v0.5 until Human approval and merge.
+
+## Smartphone Runtime Finding
+
+Initial Hero Tree candidate failed when downloaded and opened locally on smartphone.
+
+The active candidate has been repackaged as a **local-file-safe compatibility bundle**:
+- no ES modules
+- no import map
+- no runtime CDN dependency
+- Three.js r160 classic + required addons embedded in the HTML
+
+Human smartphone retest is pending.
