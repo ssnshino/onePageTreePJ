@@ -1,0 +1,20 @@
+{
+  "name": "one-page-threejs-realistic-world",
+  "private": true,
+  "version": "0.6.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build-onepage.mjs --minify",
+    "build:debug": "node scripts/build-onepage.mjs",
+    "verify": "node scripts/verify-dist.mjs"
+  },
+  "dependencies": {
+    "three": "0.186.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

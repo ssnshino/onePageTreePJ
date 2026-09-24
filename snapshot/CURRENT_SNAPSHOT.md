@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-24T11:14:00+09:00
+Updated: 2026-09-24T12:32:00+09:00
 
 ## Repository State
 
@@ -76,3 +76,18 @@ The active candidate has been repackaged as a **local-file-safe compatibility bu
 - Three.js r160 classic + required addons embedded in the HTML
 
 Human smartphone retest is pending.
+
+## Active Build-System Candidate
+
+- Branch: `refactor/source-split-build-system`
+- Draft PR: `#4`
+- Base: `feature/v0.6-hero-tree-prototype-01`
+- Development source is now split under `src/`
+- Three.js r186 is bundled with esbuild into a classic IIFE
+- Final output remains one HTML
+- GitHub Actions build/verify: **PASS** (run `35953170260`)
+- Generated size: about 605.5 KiB
+- runtime import map / module / CDN dependency: none
+- Human smartphone test of the **r186 bundled artifact**: PENDING
+
+Important: the previous r160 local-safe Hero Tree candidate already booted successfully on smartphone. The build-system phase now restores r186 while keeping the local one-file distribution target.

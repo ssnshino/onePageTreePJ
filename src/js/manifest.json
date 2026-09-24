@@ -1,0 +1,16 @@
+{
+  "source": "v0.6 Hero Tree Prototype 01",
+  "sourceCommit": "74564e8988b0779dd86b68fed5cfa3c634ce6fb2",
+  "order": [
+    "00-bootstrap.js",
+    "10-renderer-scene.js",
+    "20-environment.js",
+    "30-terrain.js",
+    "40-natural-common.js",
+    "50-rocks.js",
+    "60-hero-tree.js",
+    "70-reeds.js",
+    "80-props-water.js",
+    "90-controls-loop.js"
+  ]
+}

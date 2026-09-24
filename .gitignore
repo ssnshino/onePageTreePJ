@@ -4,6 +4,8 @@ Thumbs.db
 *.mp4
 *.zip
 node_modules/
-dist/
 tmp/
 .cache/
+
+# Generated dist is ignored by default; reviewed HTML may be force-added/released.
+dist/
