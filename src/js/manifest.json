@@ -1,6 +1,6 @@
 {
-  "source": "v0.6 Hero Tree Prototype 01",
-  "sourceCommit": "74564e8988b0779dd86b68fed5cfa3c634ce6fb2",
+  "source": "v0.6 Hero Tree Prototype 02 — Old Oak",
+  "researchBasis": "Weber-Penn / Three.js TreeGenerator r186 / SeedThree White Oak",
   "order": [
     "00-bootstrap.js",
     "10-renderer-scene.js",
@@ -8,6 +8,9 @@
     "30-terrain.js",
     "40-natural-common.js",
     "50-rocks.js",
+    "55-old-oak-spec.js",
+    "56-old-oak-skeleton.js",
+    "57-old-oak-foliage.js",
     "60-hero-tree.js",
     "70-reeds.js",
     "80-props-water.js",

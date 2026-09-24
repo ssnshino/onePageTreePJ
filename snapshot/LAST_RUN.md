@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-24T12:32:00+09:00
+Updated: 2026-09-24T13:32:00+09:00
 
 ## Session Summary
 
@@ -112,3 +112,32 @@ Agent-side headless Chromium could not initialize WebGL/EGL, so visual review re
 
 Next:
 download the r186 bundled one-page artifact, test smartphone local-file execution, then begin Hero Tree Prototype 02 on the split-source architecture.
+
+## Current Run — Hero Tree Prototype 02 OLD OAK
+
+A research-first tree rewrite was implemented on the new split-source build architecture.
+
+Research:
+- Weber & Penn tree model
+- Three.js r186 TreeGenerator
+- SeedThree White Oak preset and foliage implementation
+
+Implementation:
+- species-style OLD OAK preset
+- spherical crown branch-length profile
+- heavy flare / surface roots
+- low broad scaffold branches
+- strong secondary gnarl
+- golden-angle branch distribution
+- phototropic branch tips
+- procedural lobed oak leaves
+- twig-base anchored leaf cards
+- single InstancedMesh foliage draw path
+- expanded renderer performance HUD
+
+CI:
+- run `35955885981`
+- PASS
+
+Next:
+Human real-device visual review of the Prototype 02 artifact.

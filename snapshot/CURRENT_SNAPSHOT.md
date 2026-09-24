@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-24T12:32:00+09:00
+Updated: 2026-09-24T13:32:00+09:00
 
 ## Repository State
 
@@ -91,3 +91,15 @@ Human smartphone retest is pending.
 - Human smartphone test of the **r186 bundled artifact**: PENDING
 
 Important: the previous r160 local-safe Hero Tree candidate already booted successfully on smartphone. The build-system phase now restores r186 while keeping the local one-file distribution target.
+
+## Active Candidate — Hero Tree Prototype 02 OLD OAK
+
+- Branch: `feature/v0.6-hero-tree-prototype-02-old-oak`
+- Draft PR: `#5`
+- Base: `refactor/source-split-build-system`
+- Artifact: `threejs_onepage_waterworld_v0.6_hero_tree_prototype_02_old_oak.html`
+- Research basis: Weber–Penn / Three.js r186 TreeGenerator / SeedThree White Oak
+- Generic foliage clusters replaced with base-anchored individual oak leaves
+- Performance HUD expanded to FPS / TRI / CALL / GEO / TEX / DPR / REFLECT
+- GitHub Actions run `35955885981`: **PASS**
+- Human visual review: PENDING

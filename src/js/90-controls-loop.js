@@ -123,7 +123,11 @@
     if(now - fpsLast >= 700){
       const fps = fpsFrames * 1000 / (now - fpsLast);
       const tri = renderer.info.render.triangles;
-      fpsEl.textContent = `FPS ${fps.toFixed(1)} · ${tri.toLocaleString()} TRI · REFLECT ${isMobile?'512':'1024'}²`;
+      const calls=renderer.info.render.calls;
+      const geo=renderer.info.memory.geometries;
+      const tex=renderer.info.memory.textures;
+      const dpr=renderer.getPixelRatio();
+      fpsEl.textContent = `FPS ${fps.toFixed(1)} · ${tri.toLocaleString()} TRI · ${calls} CALL · ${geo} GEO · ${tex} TEX · DPR ${dpr.toFixed(2)} · REFLECT ${isMobile?'512':'1024'}²`;
       fpsFrames = 0;
       fpsLast = now;
     }
@@ -139,5 +143,5 @@
   errorBox.textContent =
     '初期化に失敗しました。\n\n' +
     (err?.stack || err?.message || String(err)) +
-    '\n\nこの版は Three.js r186 をCDNから読み込むため、初回起動時はネット接続が必要です。';
+    '\n\nこの版は Three.js r186 を一枚HTMLへbundleしたローカル実行版です。';
 }

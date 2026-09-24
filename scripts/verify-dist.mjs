@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const file=new URL('../dist/threejs_onepage_waterworld_v0.6_hero_tree_prototype_01.html',import.meta.url);
+const file=new URL('../dist/threejs_onepage_waterworld_v0.6_hero_tree_prototype_02_old_oak.html',import.meta.url);
 const html=await readFile(file,'utf8');
 const failures=[];
 const expect=(cond,msg)=>{if(!cond)failures.push(msg)};
@@ -11,7 +11,7 @@ expect(!html.includes('type="module"'),'module script remained in dist');
 expect(!html.includes('type="importmap"'),'import map remained in dist');
 expect(!html.includes("from 'three'"),'unbundled three import remained');
 expect(!html.includes('cdn.jsdelivr.net/npm/three@'),'runtime Three.js CDN remained');
-expect(html.includes('HERO TREE PROTOTYPE 01'),'hero tree UI marker missing');
+expect(html.includes('HERO TREE PROTOTYPE 02'),'hero tree UI marker missing');
 expect(html.includes('r186 bundled / one-page build'),'runtime HUD label missing');
 
 const start=html.indexOf('<script>');
