@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-24T14:36:00+09:00
+Updated: 2026-09-24T23:08:00+09:00
 
 ## Repository State
 
@@ -133,3 +133,17 @@ Important: the previous r160 local-safe Hero Tree candidate already booted succe
 - keyboard shortcuts: I / H / 1–4 / W / S
 - GitHub Actions run `35960630079`: **PASS**
 - Human UI review: PENDING
+
+## Active Reference Study — Bedford Oak
+
+- Branch: `feature/tree-lab-bedford-oak-reference`
+- Draft PR: `#9`
+- Primary real-tree target: Bedford Oak, Bedford NY (`Quercus alba`)
+- 2022 measured target: 69 ft height / >120 ft spread / 21 ft 3 in circumference at 4.5 ft
+- Normalized target spread/height: >= 1.74
+- Normalized target trunk diameter/height: ~= 0.098
+- TREE LAB now displays live model ratios beside real-tree targets
+- Bedford 2022 photo link is built into the Inspector
+- Wye Oak retained as secondary buttress/root reference
+- GitHub Actions run `36010044269`: **PASS**
+- Human photographic comparison: PENDING

@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-24T14:36:00+09:00
+Updated: 2026-09-24T23:08:00+09:00
 
 ## Session Summary
 
@@ -187,3 +187,26 @@ CI:
 
 Next:
 Human review of the new Inspector while actively tuning the OLD OAK.
+
+## Current Run — Bedford Oak Photo Match
+
+The tuning process moved from generic old-oak aesthetics to a specific real-tree target.
+
+Primary reference:
+Bedford Oak, Bedford NY.
+
+TREE LAB additions:
+- Bedford Oak morphology candidate
+- real photograph link
+- explicit real-tree measurement facts
+- normalized target/model ratio display
+- front + silhouette comparison shortcut
+
+The candidate parameters remain experimental and are not treated as survey/photogrammetry output.
+
+CI:
+- run `36010044269`
+- PASS
+
+Next:
+Human comparison against the real Bedford Oak photograph and iterative parameter tuning.
