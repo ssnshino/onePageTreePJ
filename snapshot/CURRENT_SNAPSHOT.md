@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-24T23:08:00+09:00
+Updated: 2026-09-25T00:28:00+09:00
 
 ## Repository State
 
@@ -147,3 +147,15 @@ Important: the previous r160 local-safe Hero Tree candidate already booted succe
 - Wye Oak retained as secondary buttress/root reference
 - GitHub Actions run `36010044269`: **PASS**
 - Human photographic comparison: PENDING
+
+## Active Tuning — Foliage Volume
+
+- Branch: `feature/tree-lab-foliage-volume-tuning`
+- Draft PR: `#10`
+- Base: `feature/tree-lab-bedford-oak-reference`
+- Bedford/Oak skeleton retained
+- New canopy controls: density / inner fill / clump span / dead branches / lower crown fill / sky gaps
+- Foliage presets: sparse / winter-ish / summer / dense
+- WOOD display toggle allows leaves-only review
+- GitHub Actions run `36020030281`: **PASS**
+- Human canopy-density review: PENDING

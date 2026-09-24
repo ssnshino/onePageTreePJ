@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-24T23:08:00+09:00
+Updated: 2026-09-25T00:28:00+09:00
 
 ## Session Summary
 
@@ -210,3 +210,27 @@ CI:
 
 Next:
 Human comparison against the real Bedford Oak photograph and iterative parameter tuning.
+
+## Current Run — Foliage Volume Tuning
+
+Human review judged the Bedford/Oak trunk and branch skeleton substantially improved, while foliage remained too sparse and winter-like.
+
+The next pass therefore keeps the skeleton and makes canopy volume independently tunable.
+
+Implemented:
+- canopy density
+- inner fill
+- clump span
+- dead branch fraction
+- lower crown fill
+- coherent sky gaps
+- summer/winter/dense foliage presets
+- independent WOOD display toggle
+- leaf-group metrics
+
+CI:
+- run `36020030281`
+- PASS
+
+Next:
+Human A/B review of SUMMER and DENSE canopy settings against the Bedford Oak photo reference.

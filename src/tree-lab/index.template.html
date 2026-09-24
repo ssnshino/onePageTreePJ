@@ -86,9 +86,25 @@
         </div>
       </details>
 
-      <details class="accordion" data-section="foliage">
-        <summary><span>FOLIAGE</span><small>density / scale</small></summary>
+      <details class="accordion" data-section="foliage" open>
+        <summary><span>FOLIAGE</span><small>volume / gaps / clumps</small></summary>
         <div class="section-body">
+          <div class="foliage-preset-row">
+            <label for="foliagePreset">FOLIAGE PRESET</label>
+            <select id="foliagePreset" class="preset-select">
+              <option value="current">CURRENT / SPARSE</option>
+              <option value="winter">WINTER-ish</option>
+              <option value="summer">SUMMER</option>
+              <option value="dense">DENSE CANOPY</option>
+              <option value="custom">CUSTOM</option>
+            </select>
+          </div>
+          <div class="ctrl"><label><span>CANOPY DENSITY</span><b data-value="canopyDensity">1.00</b></label><input id="canopyDensity" type="range" min="0.25" max="2.50" step="0.05" value="1.00"></div>
+          <div class="ctrl"><label><span>INNER FILL</span><b data-value="innerFill">0.12</b></label><input id="innerFill" type="range" min="0" max="1" step="0.02" value="0.12"></div>
+          <div class="ctrl"><label><span>CLUMP SPAN</span><b data-value="clumpSpan">0.72</b></label><input id="clumpSpan" type="range" min="0.20" max="0.96" step="0.02" value="0.72"></div>
+          <div class="ctrl"><label><span>DEAD BRANCH FRACTION</span><b data-value="deadBranchFraction">0.04</b></label><input id="deadBranchFraction" type="range" min="0" max="0.40" step="0.01" value="0.04"></div>
+          <div class="ctrl"><label><span>LOWER CROWN FILL</span><b data-value="lowerCrownFill">0.55</b></label><input id="lowerCrownFill" type="range" min="0" max="1" step="0.02" value="0.55"></div>
+          <div class="ctrl"><label><span>SKY GAP</span><b data-value="skyGap">0.18</b></label><input id="skyGap" type="range" min="0" max="0.60" step="0.02" value="0.18"></div>
           <div class="ctrl"><label><span>LEAVES / TWIG</span><b data-value="leafCount">9</b></label><input id="leafCount" type="range" min="2" max="18" step="1" value="9"></div>
           <div class="ctrl"><label><span>LEAF SIZE</span><b data-value="leafSize">0.48</b></label><input id="leafSize" type="range" min="0.2" max="0.9" step="0.02" value="0.48"></div>
         </div>
@@ -114,6 +130,7 @@
         <div class="toggle-grid" role="group" aria-label="表示モード">
           <button id="silhouette" type="button" aria-pressed="false">SILHOUETTE</button>
           <button id="wire" type="button" aria-pressed="false">WIREFRAME</button>
+          <button id="wood" type="button" aria-pressed="true">WOOD</button>
           <button id="leaves" type="button" aria-pressed="true">LEAVES</button>
           <button id="roots" type="button" aria-pressed="true">ROOTS</button>
         </div>

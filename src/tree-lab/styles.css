@@ -480,3 +480,22 @@ kbd{
 @media(max-width:700px){
   .reference-link,.reference-action{min-height:44px}
 }
+
+.foliage-preset-row{
+  padding:8px 9px;
+  border:1px solid rgba(130,225,191,.28);
+  border-radius:10px;
+  background:rgba(130,225,191,.055);
+}
+.foliage-preset-row label{
+  display:block;
+  margin:0 0 6px;
+  color:var(--muted);
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+}
+.foliage-preset-row .preset-select{min-height:36px}
+@media(max-width:700px){
+  .foliage-preset-row .preset-select{min-height:44px}
+}

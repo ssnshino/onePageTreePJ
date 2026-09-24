@@ -1,4 +1,9 @@
   // OLD OAK FOLIAGE — base-anchored individual oak leaves
+  //
+  // Near foliage remains individual instanced leaves, but canopy volume is no
+  // longer controlled by leaf-count alone. Distribution is shaped by:
+  // canopy density, inner fill, clump span, dead-branch fraction, lower-crown
+  // fill, and coherent sky gaps.
   function drawWhiteOakLeafShape(ctx,size,fillStyle){
     const cx=size*.5,yBase=size*.91,yTip=size*.08,left=[],right=[],steps=34;
     for(let i=0;i<=steps;i++){
@@ -28,7 +33,7 @@
     const cc=colorCanvas.getContext('2d'),ac=alphaCanvas.getContext('2d');
     const rng=mulberry32(seed*5011+29);
 
-    // Transparent pixels keep green RGB so mip filtering does not make black halos.
+    // Transparent pixels keep foliage-green RGB so mip filtering does not make black halos.
     cc.fillStyle='#42663b';cc.fillRect(0,0,size,size);
     ac.fillStyle='#000';ac.fillRect(0,0,size,size);
 
@@ -102,12 +107,85 @@
     return g;
   }
 
+  function foliageCellHash(pos,seed){
+    // Quantized spatial hash: nearby twigs share a gap decision, producing real
+    // canopy holes instead of evenly deleting random leaves.
+    const qx=Math.floor(pos.x*.58);
+    const qy=Math.floor(pos.y*.42);
+    const qz=Math.floor(pos.z*.58);
+    const n=Math.sin(qx*127.1+qy*311.7+qz*74.7+seed*19.19)*43758.5453123;
+    return n-Math.floor(n);
+  }
+
+  function stemTip(stem){
+    return stem.rings[stem.rings.length-1].pos;
+  }
+
+  function foliageHeightRange(stems){
+    let min=Infinity,max=-Infinity;
+    for(const stem of stems){
+      const y=stemTip(stem).y;
+      min=Math.min(min,y);max=Math.max(max,y);
+    }
+    if(!Number.isFinite(min)||!Number.isFinite(max)||max-min<1e-4)return {min:0,max:1};
+    return {min,max};
+  }
+
+  function buildFoliagePlan(skeleton,spec,seed){
+    const f=spec.foliage;
+    const terminalSet=new Set(skeleton.terminalStems.map(s=>s.id));
+    const terminal=skeleton.terminalStems;
+    const inner=skeleton.stems.filter(s=>s.level===2&&!terminalSet.has(s.id));
+    const {min,max}=foliageHeightRange(terminal);
+    const heightSpan=Math.max(.001,max-min);
+    const plan=[];
+
+    const addStem=(stem,index,isInner)=>{
+      const tip=stemTip(stem);
+      const rng=mulberry32(seed*7907+stem.id*173+index*31+(isInner?991:0));
+
+      // Whole twig/stem omissions are intentional. They preserve old-tree dead wood.
+      const deadChance=THREE.MathUtils.clamp(f.deadBranchFraction*(isInner?.45:1),0,.75);
+      if(rng()<deadChance)return;
+
+      // Spatially coherent holes create visible sky gaps through the crown.
+      const gapField=foliageCellHash(tip,seed+(isInner?103:0));
+      const gapChance=THREE.MathUtils.clamp(f.skyGap*(isInner?.45:1),0,.82);
+      if(gapField<gapChance)return;
+
+      const h=THREE.MathUtils.clamp((tip.y-min)/heightSpan,0,1);
+      // lowerCrownFill=0 strongly thins the lower crown; 1 gives equal density.
+      const lowerWeight=h<.50
+        ? THREE.MathUtils.lerp(f.lowerCrownFill,1,h/.50)
+        : 1;
+
+      const base=isMobile?f.mobileLeavesPerTwig:f.desktopLeavesPerTwig;
+      const innerWeight=isInner?f.innerFill*.62:1;
+      const count=Math.max(0,Math.round(base*f.canopyDensity*lowerWeight*innerWeight));
+      if(count<=0)return;
+
+      plan.push({stem,count,isInner,rngSeed:seed*7001+stem.id*149+(isInner?31337:0)});
+    };
+
+    terminal.forEach((stem,i)=>addStem(stem,i,false));
+
+    // Inner fill adds foliage to secondary stems as a separate canopy-volume layer.
+    // It is intentionally lower density than terminal foliage so trunk/branch
+    // structure still reads through the crown.
+    if(f.innerFill>0){
+      inner.forEach((stem,i)=>addStem(stem,i,true));
+    }
+
+    return plan;
+  }
+
   function buildOldOakFoliage(skeleton,spec,seed){
+    const f=spec.foliage;
     const tex=makeWhiteOakLeafTextures(seed+71,isMobile?192:256);
     const material=new THREE.MeshStandardMaterial({
       map:tex.map,
       alphaMap:tex.alphaMap,
-      alphaTest:spec.foliage.alphaTest,
+      alphaTest:f.alphaTest,
       side:THREE.DoubleSide,
       roughness:.88,
       metalness:0,
@@ -117,9 +195,9 @@
     material.alphaToCoverage=!isMobile;
 
     const geometry=createOldOakLeafGeometry();
-    const leavesPerTwig=isMobile?spec.foliage.mobileLeavesPerTwig:spec.foliage.desktopLeavesPerTwig;
-    const maxLeaves=skeleton.terminalStems.length*leavesPerTwig;
-    const mesh=new THREE.InstancedMesh(geometry,material,maxLeaves);
+    const plan=buildFoliagePlan(skeleton,spec,seed);
+    const plannedLeaves=plan.reduce((sum,p)=>sum+p.count,0);
+    const mesh=new THREE.InstancedMesh(geometry,material,Math.max(1,plannedLeaves));
     mesh.castShadow=true;mesh.receiveShadow=true;
 
     const dummy=new THREE.Object3D();
@@ -132,18 +210,27 @@
     ];
 
     let count=0;
-    for(let s=0;s<skeleton.terminalStems.length;s++){
-      const stem=skeleton.terminalStems[s],rng=mulberry32(seed*7001+s*149);
-      for(let i=0;i<leavesPerTwig;i++){
-        const t=THREE.MathUtils.clamp(.24+(i+.35+rng()*.32)/(leavesPerTwig+.45)*.73,.22,.96);
+    for(const item of plan){
+      const stem=item.stem;
+      const rng=mulberry32(item.rngSeed);
+      const clumpSpan=THREE.MathUtils.clamp(f.clumpSpan,0.18,.96);
+      const tMin=THREE.MathUtils.clamp(.96-clumpSpan+(item.isInner?.12:0),.08,.78);
+      const tMax=item.isInner?.90:.975;
+
+      for(let i=0;i<item.count;i++){
+        // A gentle distal bias keeps leaves in branch-end masses while clumpSpan
+        // controls how far those masses extend back toward the parent.
+        const u=(i+.28+rng()*.44)/(item.count+.35);
+        const biased=1-Math.pow(1-THREE.MathUtils.clamp(u,0,1),1.28);
+        const t=THREE.MathUtils.lerp(tMin,tMax,biased);
         const ring=oldOakRingAt(stem.rings,t);
         binormal.crossVectors(ring.tangent,ring.normal).normalize();
 
-        const roll=i*OAK_GOLDEN_ANGLE+(rng()*2-1)*.34;
+        const roll=i*OAK_GOLDEN_ANGLE+(rng()*2-1)*.38;
         radial.copy(ring.normal).multiplyScalar(Math.cos(roll))
           .addScaledVector(binormal,Math.sin(roll)).normalize();
 
-        const angle=(spec.foliage.downAngle+(rng()*2-1)*spec.foliage.angleVariance)*OAK_DEG2RAD;
+        const angle=(f.downAngle+(rng()*2-1)*f.angleVariance)*OAK_DEG2RAD;
         leafDir.copy(ring.tangent).multiplyScalar(Math.cos(angle))
           .addScaledVector(radial,Math.sin(angle))
           .lerp(OAK_UP,.10).normalize();
@@ -158,13 +245,14 @@
 
         dummy.position.copy(ring.pos).addScaledVector(radial,.018);
         dummy.quaternion.copy(quat);
-        const leafSize=spec.foliage.size*(1+(rng()*2-1)*spec.foliage.sizeVariance);
+        const leafSize=f.size*(1+(rng()*2-1)*f.sizeVariance);
         dummy.scale.set(leafSize*.62,leafSize,1);
         dummy.updateMatrix();
         mesh.setMatrixAt(count,dummy.matrix);
 
         const color=palette[Math.floor(rng()*palette.length)%palette.length].clone();
-        color.offsetHSL((rng()-.5)*.025,(rng()-.5)*.06,(rng()-.5)*.055);
+        const innerShade=item.isInner?-.055:0;
+        color.offsetHSL((rng()-.5)*.025,(rng()-.5)*.06,(rng()-.5)*.055+innerShade);
         mesh.setColorAt(count,color);
         count++;
       }
@@ -174,5 +262,11 @@
     mesh.instanceMatrix.needsUpdate=true;
     if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
     mesh.computeBoundingSphere();
+    mesh.userData.foliagePlan={
+      plannedLeaves,
+      renderedLeaves:count,
+      terminalGroups:plan.filter(p=>!p.isInner).length,
+      innerGroups:plan.filter(p=>p.isInner).length
+    };
     return mesh;
   }
