@@ -54,6 +54,6 @@ const html=template
   .replace('/*__INLINE_JS__*/',()=>js);
 
 await mkdir(dist,{recursive:true});
-const target=path.join(dist,'threejs_onepage_waterworld_v0.6_hero_tree_prototype_01.html');
+const target=path.join(dist,'threejs_onepage_waterworld_v0.6_hero_tree_prototype_02_old_oak.html');
 await writeFile(target,html,'utf8');
 console.log(`ONE-PAGE BUILD OK: ${path.relative(root,target)} / ${(Buffer.byteLength(html)/1024).toFixed(1)} KiB / three@0.186.0 / minify=${minify}`);
