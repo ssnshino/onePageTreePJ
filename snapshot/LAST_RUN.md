@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-24T10:03:46+09:00
+Updated: 2026-09-24T11:14:00+09:00
 
 ## Session Summary
 
@@ -53,3 +53,32 @@ Open a dedicated Three.js chat, use `snapshot/NEXT_CHAT_PROMPT.txt`, then start 
 ## Update History
 
 - 2026-09-24T10:03:46+09:00 — ChatGPT — Repository bootstrap merge recorded and next-session handoff finalized.
+
+## Current Run — Hero Tree Prototype 01
+
+v0.6 implementation has started on `feature/v0.6-hero-tree-prototype-01`.
+
+Implemented candidate:
+- curved tapered swept trunk/branches
+- 4-level hierarchy
+- exposed surface roots
+- procedural bark reuse
+- procedural alpha-cutout foliage cards
+- InstancedMesh foliage
+- Hero Tree review camera
+
+Static JS compile passed. Browser/Human visual review remains pending.
+
+Important repository finding: current v0.5 HTML artifact is truncated at 1000 lines; the v0.6 candidate restores only the shared tail from the complete v0.4 sample without modifying v0.5 itself.
+
+## Runtime Packaging Revision
+
+The first smartphone local-file test exposed a module-loading failure.
+
+The Hero Tree candidate was repackaged for direct `file://` execution:
+- Three.js r160 classic core fully embedded
+- required addons embedded
+- no import map / no `type="module"`
+- static combined-JS parse PASS
+
+Next action: smartphone local-file retest.
