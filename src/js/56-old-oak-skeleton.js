@@ -104,7 +104,17 @@
         }
         angle+=(random()*2-1)*spec.angleVariance[Math.min(level,spec.angleVariance.length-1)];
 
-        const roll=i*OAK_GOLDEN_ANGLE+(random()*2-1)*.42;
+        const rollJitter=(random()*2-1)*.42;
+        let roll=i*OAK_GOLDEN_ANGLE+rollJitter;
+        const azimuthBalance=level===0?THREE.MathUtils.clamp(spec.azimuthBalance||0,0,1):0;
+        if(azimuthBalance>0){
+          // Coverage-guard experiment. At 0, the baseline is unchanged.
+          // Toward 1, primary limbs blend toward evenly divided azimuth sectors.
+          const phase=((seed*.7548776662466927)%1)*Math.PI*2;
+          const evenRoll=phase+(i/n)*Math.PI*2+rollJitter*(1-azimuthBalance)*.45;
+          const delta=Math.atan2(Math.sin(evenRoll-roll),Math.cos(evenRoll-roll));
+          roll+=delta*azimuthBalance;
+        }
         const childDir=ring.tangent.clone()
           .applyAxisAngle(ring.normal,angle*OAK_DEG2RAD)
           .applyAxisAngle(ring.tangent,roll);

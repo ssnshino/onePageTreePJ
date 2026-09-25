@@ -79,6 +79,9 @@ const barkMap=makeLabBarkTexture();
 
 let treeGroup=null;
 let leafMesh=null,woodMesh=null,rootMesh=null;
+let currentSkeleton=null;
+let targetPointGroup=null;
+let gapArrow=null;
 let currentSpec=null;
 let lastBuildMs=0;
 let silhouette=false;
@@ -86,13 +89,15 @@ let wire=false;
 let woodVisible=true;
 let leavesVisible=true;
 let rootsVisible=true;
+let targetPointsVisible=true;
+let uncoveredOnly=false;
 let inspectorCollapsed=isMobile;
 let uiHidden=false;
 let currentView='three';
 let toastTimer=0;
 
-const ids=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','gnarl1','gnarl2','upPull','canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize'];
-const MORPHOLOGY_IDS=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','gnarl1','gnarl2','upPull'];
+const ids=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','azimuthBalance','gnarl1','gnarl2','upPull','canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize'];
+const MORPHOLOGY_IDS=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','azimuthBalance','gnarl1','gnarl2','upPull'];
 const FOLIAGE_IDS=['canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize'];
 const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
 const defaultValues=Object.fromEntries(ids.map(id=>[id,el[id].value]));
@@ -103,6 +108,9 @@ const foliagePresetEl=document.getElementById('foliagePreset');
 const modelSpreadRatioEl=document.getElementById('modelSpreadRatio');
 const modelTrunkRatioEl=document.getElementById('modelTrunkRatio');
 const bedfordMatchViewBtn=document.getElementById('bedfordMatchView');
+const targetCoverageEl=document.getElementById('targetCoverage');
+const azimuthCoverageEl=document.getElementById('azimuthCoverage');
+const maxAzimuthGapEl=document.getElementById('maxAzimuthGap');
 
 const MORPHOLOGY_PRESETS={
   current:{...defaultValues},
@@ -119,6 +127,7 @@ const MORPHOLOGY_PRESETS={
     branches:'9',
     angle:'75',
     crownSpread:'0.64',
+    azimuthBalance:'0.65',
     gnarl1:'0.125',
     gnarl2:'0.220',
     upPull:'0.14',
@@ -139,6 +148,7 @@ const MORPHOLOGY_PRESETS={
     branches:'10',
     angle:'81',
     crownSpread:'0.80',
+    azimuthBalance:'0.78',
     gnarl1:'0.135',
     gnarl2:'0.240',
     upPull:'0.16',
@@ -257,6 +267,7 @@ function readSpec(){
   s.children[0]=Math.round(Number(el.branches.value));
   s.branchAngle[0]=Number(el.angle.value);
   s.lengthRatio[0]=Number(el.crownSpread.value);
+  s.azimuthBalance=Number(el.azimuthBalance.value);
   s.gnarl[1]=Number(el.gnarl1.value);
   s.gnarl[2]=Number(el.gnarl2.value);
   s.upPull[2]=Number(el.upPull.value);
@@ -305,9 +316,9 @@ function applyMorphologyPreset(name){
   morphologyPresetEl.value=name;
   syncFoliagePreset();
   const messages={
-    current:'Current morphology applied',
-    'open-grown':'Open-grown oak morphology applied',
-    'bedford-2022':'Bedford Oak morphology applied'
+    current:'現行の樹形に戻しました',
+    'open-grown':'開放地オークの樹形を適用しました',
+    'bedford-2022':'Bedford Oak 樹形を適用しました'
   };
   showToast(messages[name]||'Morphology applied');
 }
@@ -318,12 +329,142 @@ function applyFoliagePreset(name){
   foliagePresetEl.value=name;
   syncMorphologyPreset();
   const messages={
-    current:'Current sparse foliage applied',
-    winter:'Winter-ish foliage applied',
-    summer:'Summer foliage applied',
-    dense:'Dense canopy applied'
+    current:'現行の葉量に戻しました',
+    winter:'冬寄りの葉量を適用しました',
+    summer:'夏の葉量を適用しました',
+    dense:'もさもさ上限を適用しました'
   };
   showToast(messages[name]||'Foliage applied');
+}
+
+function disposeTargetPoints(){
+  if(!targetPointGroup)return;
+  scene.remove(targetPointGroup);
+  targetPointGroup.traverse(o=>{
+    if(o.geometry)o.geometry.dispose();
+    if(o.material)o.material.dispose();
+  });
+  targetPointGroup=null;
+  gapArrow=null;
+}
+
+function analyzePrimaryAzimuth(skeleton){
+  const primary=skeleton.stems.filter(s=>s.level===1&&s.rings.length>1);
+  const angles=[];
+  const occupied=new Set();
+  const sectors=12;
+  for(const stem of primary){
+    const a=stem.rings[0].pos,b=stem.rings[stem.rings.length-1].pos;
+    const dx=b.x-a.x,dz=b.z-a.z;
+    if(dx*dx+dz*dz<1e-5)continue;
+    let angle=Math.atan2(dz,dx);
+    if(angle<0)angle+=Math.PI*2;
+    angles.push(angle);
+    occupied.add(Math.floor(angle/(Math.PI*2)*sectors)%sectors);
+  }
+  angles.sort((a,b)=>a-b);
+  let maxGap=Math.PI*2,gapMid=0;
+  if(angles.length>0){
+    maxGap=0;
+    for(let i=0;i<angles.length;i++){
+      const a=angles[i];
+      const b=i===angles.length-1?angles[0]+Math.PI*2:angles[i+1];
+      const gap=b-a;
+      if(gap>maxGap){maxGap=gap;gapMid=(a+gap*.5)%(Math.PI*2)}
+    }
+  }
+  return {occupied:occupied.size,sectors,maxGapDeg:maxGap/OAK_DEG2RAD,gapMid};
+}
+
+function pointNearBranch(p,samples,radiusSq){
+  for(const q of samples){
+    const dx=p.x-q.x,dy=p.y-q.y,dz=p.z-q.z;
+    if(dx*dx+dy*dy+dz*dz<=radiusSq)return true;
+  }
+  return false;
+}
+
+function applyTargetPointMode(){
+  if(!targetPointGroup)return;
+  targetPointGroup.visible=targetPointsVisible;
+  const covered=targetPointGroup.getObjectByName('covered-attraction-points');
+  const uncovered=targetPointGroup.getObjectByName('uncovered-attraction-points');
+  if(covered)covered.visible=!uncoveredOnly;
+  if(uncovered)uncovered.visible=true;
+  document.getElementById('targetPoints').setAttribute('aria-pressed',String(targetPointsVisible));
+  document.getElementById('uncoveredOnly').setAttribute('aria-pressed',String(uncoveredOnly));
+}
+
+function rebuildAttractionPoints(skeleton){
+  disposeTargetPoints();
+  if(!treeGroup||!currentSpec)return;
+
+  treeGroup.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(treeGroup,true);
+  const size=box.getSize(new THREE.Vector3());
+  const targetHeight=Math.max(currentSpec.trunkLength,size.y*.92);
+  const rx=targetHeight*.87;
+  const rz=rx*.86;
+  const ry=targetHeight*.48;
+  const cy=Math.max(targetHeight*.53,box.min.y+targetHeight*.52);
+  const count=isMobile?260:440;
+  const rng=mulberry32(currentSpec.seed*9127+17);
+  const points=[];
+  let guard=0;
+
+  while(points.length<count&&guard<count*12){
+    guard++;
+    const z=rng()*2-1;
+    const phi=rng()*Math.PI*2;
+    const s=Math.sqrt(Math.max(0,1-z*z));
+    const surfaceBiased=rng()<.68;
+    const radial=surfaceBiased?(.58+.42*Math.sqrt(rng())):Math.cbrt(rng())*.82;
+    const p=new THREE.Vector3(
+      Math.cos(phi)*s*radial*rx,
+      cy+z*radial*ry,
+      Math.sin(phi)*s*radial*rz
+    );
+    if(p.y<.45)continue;
+    points.push(p);
+  }
+
+  const branchSamples=[];
+  for(const stem of skeleton.stems){
+    if(stem.level===0)continue;
+    for(const ring of stem.rings)branchSamples.push(ring.pos);
+  }
+  const coverageRadius=Math.max(.60,targetHeight*.075);
+  const radiusSq=coverageRadius*coverageRadius;
+  const covered=[],uncovered=[];
+  for(const p of points){
+    (pointNearBranch(p,branchSamples,radiusSq)?covered:uncovered).push(p);
+  }
+
+  const makePoints=(list,color,name,sizePx)=>{
+    const g=new THREE.BufferGeometry().setFromPoints(list);
+    const m=new THREE.PointsMaterial({color,size:sizePx,sizeAttenuation:true,transparent:true,opacity:.88,depthWrite:false});
+    const pts=new THREE.Points(g,m);pts.name=name;return pts;
+  };
+
+  targetPointGroup=new THREE.Group();
+  targetPointGroup.name='space-colonization-diagnostic';
+  targetPointGroup.add(makePoints(covered,0x55d99b,'covered-attraction-points',isMobile?.095:.085));
+  targetPointGroup.add(makePoints(uncovered,0xff704d,'uncovered-attraction-points',isMobile?.135:.115));
+
+  const az=analyzePrimaryAzimuth(skeleton);
+  const dir=new THREE.Vector3(Math.cos(az.gapMid),0,Math.sin(az.gapMid)).normalize();
+  gapArrow=new THREE.ArrowHelper(dir,new THREE.Vector3(0,targetHeight*.43,0),Math.min(rx,rz)*.70,0xffb35a,.34,.17);
+  targetPointGroup.add(gapArrow);
+  scene.add(targetPointGroup);
+
+  const coverage=points.length?covered.length/points.length*100:0;
+  targetCoverageEl.textContent=`${coverage.toFixed(0)}%`;
+  azimuthCoverageEl.textContent=`${az.occupied}/${az.sectors}`;
+  maxAzimuthGapEl.textContent=`${az.maxGapDeg.toFixed(0)}°`;
+  targetCoverageEl.classList.toggle('diag-good',coverage>=72);
+  azimuthCoverageEl.classList.toggle('diag-good',az.occupied>=9);
+  maxAzimuthGapEl.classList.toggle('diag-warn',az.maxGapDeg>=100);
+  applyTargetPointMode();
 }
 
 function disposeObject(obj){
@@ -369,17 +510,20 @@ function applyMode(){
   document.getElementById('wire').setAttribute('aria-pressed',String(wire));
   document.getElementById('leaves').setAttribute('aria-pressed',String(leavesVisible));
   document.getElementById('roots').setAttribute('aria-pressed',String(rootsVisible));
+  applyTargetPointMode();
 }
 
 function rebuild(){
   const t0=performance.now();
   currentSpec=readSpec();
+  disposeTargetPoints();
   if(treeGroup){
     scene.remove(treeGroup);
     disposeObject(treeGroup);
   }
 
   const skeleton=generateOldOakSkeleton(currentSpec,currentSpec.seed);
+  currentSkeleton=skeleton;
   const rootStems=buildOldOakSurfaceRootStems(currentSpec,currentSpec.seed,{x:0,y:0,z:0});
   const woodGeometry=buildOldOakWoodGeometry(skeleton.stems,currentSpec);
   const rootGeometry=buildOldOakWoodGeometry(rootStems,currentSpec);
@@ -409,12 +553,13 @@ function rebuild(){
   applyMode();
   updateStaticStats();
   updateReferenceMetrics();
+  rebuildAttractionPoints(skeleton);
 }
 function updateStaticStats(){
   const s=treeGroup?.userData.stats;
   if(!s)return;
   document.getElementById('treeStats').textContent=
-    `STEMS ${s.stems} · TWIGS ${s.twigs} · LEAVES ${s.leaves} · LEAF GROUPS ${s.terminalLeafGroups}+${s.innerLeafGroups} · TREE TRI ${Math.round(s.woodTri+s.rootTri).toLocaleString()} · BUILD ${lastBuildMs.toFixed(1)}ms`;
+    `枝 ${s.stems} · 枝先 ${s.twigs} · 葉 ${s.leaves} · 葉群 ${s.terminalLeafGroups}+${s.innerLeafGroups} · 木 TRI ${Math.round(s.woodTri+s.rootTri).toLocaleString()} · 生成 ${lastBuildMs.toFixed(1)}ms`;
 }
 function updateReferenceMetrics(){
   if(!treeGroup||!currentSpec)return;
@@ -464,11 +609,13 @@ document.getElementById('wood').addEventListener('click',()=>{woodVisible=!woodV
 document.getElementById('wire').addEventListener('click',()=>{wire=!wire;applyMode()});
 document.getElementById('leaves').addEventListener('click',()=>{leavesVisible=!leavesVisible;applyMode()});
 document.getElementById('roots').addEventListener('click',()=>{rootsVisible=!rootsVisible;applyMode()});
+document.getElementById('targetPoints').addEventListener('click',()=>{targetPointsVisible=!targetPointsVisible;applyTargetPointMode()});
+document.getElementById('uncoveredOnly').addEventListener('click',()=>{uncoveredOnly=!uncoveredOnly;applyTargetPointMode()});
 
 bedfordMatchViewBtn.addEventListener('click',()=>{
   setView('front');
   if(!silhouette){silhouette=true;applyMode()}
-  showToast('Bedford silhouette check');
+  showToast('Bedford Oak 比較表示');
 });
 
 foliagePresetEl.addEventListener('change',()=>{
@@ -484,26 +631,26 @@ morphologyPresetEl.addEventListener('change',()=>{
 document.getElementById('random').addEventListener('click',()=>{
   el.seed.value=1+Math.floor(Math.random()*999);
   syncLabels();persistValues();syncMorphologyPreset();syncFoliagePreset();rebuild();
-  showToast('New seed');
+  showToast('別の個体を生成しました');
 });
 document.getElementById('reset').addEventListener('click',()=>{
   removeStored(STORAGE.values);
   applyValueState(defaultValues,{rebuildNow:true,persist:false});
   morphologyPresetEl.value='current';
   foliagePresetEl.value='current';
-  showToast('Defaults restored');
+  showToast('初期値に戻しました');
 });
 document.getElementById('savePreset').addEventListener('click',()=>{
   writeStored(STORAGE.preset,JSON.stringify(getValueState()));
-  showToast('Preset saved');
+  showToast('設定を保存しました');
 });
 document.getElementById('loadPreset').addEventListener('click',()=>{
   const saved=safeParse(readStored(STORAGE.preset));
-  if(!saved){showToast('No saved preset');return}
+  if(!saved){showToast('保存した設定がありません');return}
   applyValueState(saved);
   syncMorphologyPreset();
   syncFoliagePreset();
-  showToast('Preset loaded');
+  showToast('保存した設定を読み込みました');
 });
 document.getElementById('copyPreset').addEventListener('click',async()=>{
   const payload=JSON.stringify({
@@ -513,13 +660,13 @@ document.getElementById('copyPreset').addEventListener('click',async()=>{
   },null,2);
   try{
     await navigator.clipboard.writeText(payload);
-    showToast('Preset JSON copied');
+    showToast('設定JSONをコピーしました');
   }catch{
     const ta=document.createElement('textarea');
     ta.value=payload;ta.style.position='fixed';ta.style.opacity='0';
     document.body.appendChild(ta);ta.select();
     document.execCommand('copy');ta.remove();
-    showToast('Preset JSON copied');
+    showToast('設定JSONをコピーしました');
   }
 });
 
@@ -545,6 +692,7 @@ document.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(k==='i'){setInspectorCollapsed(!inspectorCollapsed);e.preventDefault()}
   else if(k==='h'){setUIHidden(!uiHidden);e.preventDefault()}
+  else if(k==='a'){targetPointsVisible=!targetPointsVisible;applyTargetPointMode();e.preventDefault()}
   else if(k==='w'){wire=!wire;applyMode();e.preventDefault()}
   else if(k==='s'){silhouette=!silhouette;applyMode();e.preventDefault()}
   else if(k==='1')setView('three');
@@ -577,7 +725,7 @@ renderer.setAnimationLoop(now=>{
     const fps=frames*1000/(now-fpsLast);
     const info=renderer.info;
     document.getElementById('renderStats').textContent=
-      `FPS ${fps.toFixed(1)} · ${info.render.triangles.toLocaleString()} TRI · ${info.render.calls} CALL · ${info.memory.geometries} GEO · ${info.memory.textures} TEX · DPR ${renderer.getPixelRatio().toFixed(2)}`;
+      `FPS ${fps.toFixed(1)} · ${info.render.triangles.toLocaleString()} TRI · ${info.render.calls} DRAW · ${info.memory.geometries} GEO · ${info.memory.textures} TEX · DPR ${renderer.getPixelRatio().toFixed(2)}`;
     frames=0;fpsLast=now;
   }
 });
