@@ -3,166 +3,172 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>OLD OAK TREE LAB — Inspector UI v2</title>
+<title>OLD OAK TREE LAB — 樹木研究室</title>
 <style>/*__INLINE_CSS__*/</style>
 </head>
 <body>
 <div id="app">
   <div id="stage"></div>
-
   <button id="uiWake" class="ui-wake" type="button" aria-label="UIを表示" title="UIを表示 (H)">UI</button>
 
-  <section id="inspector" class="inspector" aria-label="Old Oak Inspector">
+  <section id="inspector" class="inspector" aria-label="オールドオーク樹木インスペクタ">
     <div id="sheetHandle" class="sheet-handle" aria-hidden="true"></div>
-
     <header class="inspector-header">
       <div class="title-block">
-        <div class="eyebrow">OLD OAK</div>
+        <div class="eyebrow">OLD OAK · 樹木研究室</div>
         <h1>TREE LAB</h1>
-        <div class="caption">Morphology Inspector · shared production generator</div>
+        <div class="caption">樹形・樹冠・空間充填を観察して調整する</div>
       </div>
-      <button id="collapseInspector" class="icon-button" type="button" aria-label="Inspectorを隠す" aria-expanded="true" title="Inspector表示切替 (I)">‹</button>
+      <button id="collapseInspector" class="icon-button" type="button" aria-label="設定を隠す" aria-expanded="true" title="設定表示切替 (I)">‹</button>
     </header>
 
     <div class="inspector-scroll">
-      <section class="tool-block" aria-labelledby="viewLabel">
-        <div id="viewLabel" class="block-label">VIEW</div>
-        <div class="segmented" role="group" aria-label="カメラビュー">
-          <button type="button" data-view="three" aria-pressed="true">3/4</button>
-          <button type="button" data-view="front" aria-pressed="false">FRONT</button>
-          <button type="button" data-view="side" aria-pressed="false">SIDE</button>
-          <button type="button" data-view="top" aria-pressed="false">TOP</button>
+      <section class="tool-block">
+        <div class="block-label">視点</div>
+        <div class="segmented" role="group" aria-label="カメラ視点">
+          <button type="button" data-view="three" aria-pressed="true">斜め</button>
+          <button type="button" data-view="front" aria-pressed="false">正面</button>
+          <button type="button" data-view="side" aria-pressed="false">側面</button>
+          <button type="button" data-view="top" aria-pressed="false">真上</button>
         </div>
       </section>
 
-      <section class="tool-block morphology-block" aria-labelledby="morphologyLabel">
-        <div id="morphologyLabel" class="block-label">MORPHOLOGY</div>
-        <select id="morphologyPreset" class="preset-select" aria-label="形態プリセット">
-          <option value="current">CURRENT v0.6</option>
-          <option value="open-grown">OPEN-GROWN WHITE OAK</option>
-          <option value="bedford-2022">BEDFORD OAK 2022 — PHOTO MATCH</option>
-          <option value="custom">CUSTOM</option>
+      <section class="tool-block morphology-block">
+        <div class="block-label">樹形プリセット</div>
+        <select id="morphologyPreset" class="preset-select" aria-label="樹形プリセット">
+          <option value="current">現行 v0.6</option>
+          <option value="open-grown">開放地ホワイトオーク</option>
+          <option value="bedford-2022">Bedford Oak 2022 写真合わせ</option>
+          <option value="custom">カスタム</option>
         </select>
-        <div class="research-note">Research target: short stocky bole · wide horizontal crown · dense rounded canopy.</div>
       </section>
 
-      <section id="referencePanel" class="tool-block reference-block" aria-labelledby="referenceLabel">
-        <div class="reference-head">
-          <div>
-            <div id="referenceLabel" class="block-label">REAL TREE REFERENCE</div>
+      <details id="referencePanel" class="accordion compact-accordion" data-section="reference">
+        <summary><span>実在木リファレンス</span><small>Bedford Oak</small></summary>
+        <div class="section-body reference-body">
+          <div class="reference-head">
             <strong>Bedford Oak · Quercus alba</strong>
+            <a class="reference-link" href="https://commons.wikimedia.org/wiki/File:Bedford_Oak,_October_2022.jpg" target="_blank" rel="noopener">写真 ↗</a>
           </div>
-          <a class="reference-link" href="https://commons.wikimedia.org/wiki/File:Bedford_Oak,_October_2022.jpg" target="_blank" rel="noopener">PHOTO ↗</a>
-        </div>
-        <div class="reference-facts">2022 photo: H 69 ft · spread &gt;120 ft · circumference 21' 3" @ 4.5 ft</div>
-        <div class="ratio-grid">
-          <div><span>TARGET SPREAD / H</span><b>≥ 1.74</b></div>
-          <div><span>MODEL SPREAD / H</span><b id="modelSpreadRatio">--</b></div>
-          <div><span>TARGET TRUNK D / H</span><b>≈ 0.098</b></div>
-          <div><span>MODEL TRUNK D / H</span><b id="modelTrunkRatio">--</b></div>
-        </div>
-        <button id="bedfordMatchView" class="reference-action" type="button">FRONT + SILHOUETTE CHECK</button>
-        <div class="reference-credit">Photo: Marty Aligata, 2022 · CC BY-SA 4.0 · Wikimedia Commons</div>
-      </section>
-
-      <details class="accordion" data-section="tree" open>
-        <summary><span>TREE</span><small>scale / trunk</small></summary>
-        <div class="section-body">
-          <div class="ctrl"><label><span>HEIGHT</span><b data-value="height">12.5</b></label><input id="height" type="range" min="8" max="18" step="0.25" value="12.5"></div>
-          <div class="ctrl"><label><span>TRUNK RADIUS</span><b data-value="radius">0.74</b></label><input id="radius" type="range" min="0.4" max="1.25" step="0.02" value="0.74"></div>
-          <div class="ctrl"><label><span>TRUNK CLEAR</span><b data-value="trunkClear">0.18</b></label><input id="trunkClear" type="range" min="0.08" max="0.30" step="0.01" value="0.18"></div>
-        </div>
-      </details>
-
-      <details class="accordion" data-section="branches" open>
-        <summary><span>BRANCHES</span><small>scaffold / gnarl</small></summary>
-        <div class="section-body">
-          <div class="ctrl"><label><span>PRIMARY COUNT</span><b data-value="branches">7</b></label><input id="branches" type="range" min="3" max="14" step="1" value="7"></div>
-          <div class="ctrl"><label><span>PRIMARY ANGLE</span><b data-value="angle">68</b></label><input id="angle" type="range" min="40" max="88" step="1" value="68"></div>
-          <div class="ctrl"><label><span>CROWN SPREAD</span><b data-value="crownSpread">0.52</b></label><input id="crownSpread" type="range" min="0.42" max="0.88" step="0.01" value="0.52"></div>
-          <div class="ctrl"><label><span>L1 GNARL</span><b data-value="gnarl1">0.095</b></label><input id="gnarl1" type="range" min="0.01" max="0.24" step="0.005" value="0.095"></div>
-          <div class="ctrl"><label><span>L2 GNARL</span><b data-value="gnarl2">0.18</b></label><input id="gnarl2" type="range" min="0.02" max="0.34" step="0.005" value="0.18"></div>
-          <div class="ctrl"><label><span>TIP UP-PULL</span><b data-value="upPull">0.12</b></label><input id="upPull" type="range" min="0" max="0.38" step="0.01" value="0.12"></div>
-        </div>
-      </details>
-
-      <details class="accordion" data-section="foliage" open>
-        <summary><span>FOLIAGE</span><small>volume / gaps / clumps</small></summary>
-        <div class="section-body">
-          <div class="foliage-preset-row">
-            <label for="foliagePreset">FOLIAGE PRESET</label>
-            <select id="foliagePreset" class="preset-select">
-              <option value="current">CURRENT / SPARSE</option>
-              <option value="winter">WINTER-ish</option>
-              <option value="summer">SUMMER</option>
-              <option value="dense">DENSE CANOPY</option>
-              <option value="custom">CUSTOM</option>
-            </select>
+          <div class="reference-facts">2022実測: 高さ 69 ft · 枝張り &gt;120 ft · 幹周 21'3"（地上4.5 ft）</div>
+          <div class="ratio-grid">
+            <div><span>目標 枝張り/高さ</span><b>≥ 1.74</b></div>
+            <div><span>モデル 枝張り/高さ</span><b id="modelSpreadRatio">--</b></div>
+            <div><span>目標 幹径/高さ</span><b>≈ 0.098</b></div>
+            <div><span>モデル 幹径/高さ</span><b id="modelTrunkRatio">--</b></div>
           </div>
-          <div class="ctrl"><label><span>CANOPY DENSITY</span><b data-value="canopyDensity">1.00</b></label><input id="canopyDensity" type="range" min="0.25" max="2.50" step="0.05" value="1.00"></div>
-          <div class="ctrl"><label><span>INNER FILL</span><b data-value="innerFill">0.12</b></label><input id="innerFill" type="range" min="0" max="1" step="0.02" value="0.12"></div>
-          <div class="ctrl"><label><span>CLUMP SPAN</span><b data-value="clumpSpan">0.72</b></label><input id="clumpSpan" type="range" min="0.20" max="0.96" step="0.02" value="0.72"></div>
-          <div class="ctrl"><label><span>DEAD BRANCH FRACTION</span><b data-value="deadBranchFraction">0.04</b></label><input id="deadBranchFraction" type="range" min="0" max="0.40" step="0.01" value="0.04"></div>
-          <div class="ctrl"><label><span>LOWER CROWN FILL</span><b data-value="lowerCrownFill">0.55</b></label><input id="lowerCrownFill" type="range" min="0" max="1" step="0.02" value="0.55"></div>
-          <div class="ctrl"><label><span>SKY GAP</span><b data-value="skyGap">0.18</b></label><input id="skyGap" type="range" min="0" max="0.60" step="0.02" value="0.18"></div>
-          <div class="ctrl"><label><span>LEAVES / TWIG</span><b data-value="leafCount">9</b></label><input id="leafCount" type="range" min="2" max="18" step="1" value="9"></div>
-          <div class="ctrl"><label><span>LEAF SIZE</span><b data-value="leafSize">0.48</b></label><input id="leafSize" type="range" min="0.2" max="0.9" step="0.02" value="0.48"></div>
+          <button id="bedfordMatchView" class="reference-action" type="button">正面＋シルエットで比較</button>
+          <div class="reference-credit">Photo: Marty Aligata, 2022 · CC BY-SA 4.0 · Wikimedia Commons</div>
         </div>
       </details>
 
-      <details class="accordion" data-section="roots">
-        <summary><span>ROOTS & JOINTS</span><small>flare / collar</small></summary>
+      <details class="accordion primary-controls" data-section="basic" open>
+        <summary><span>まず触る</span><small>基本7項目</small></summary>
         <div class="section-body">
-          <div class="ctrl"><label><span>ROOT FLARE</span><b data-value="flare">0.82</b></label><input id="flare" type="range" min="0" max="1.5" step="0.02" value="0.82"></div>
-          <div class="ctrl"><label><span>JUNCTION COLLAR</span><b data-value="collar">0.24</b></label><input id="collar" type="range" min="0" max="0.65" step="0.01" value="0.24"></div>
+          <div class="ctrl"><label><span>樹高</span><b data-value="height">12.5</b></label><input id="height" type="range" min="8" max="18" step="0.25" value="12.5"></div>
+          <div class="ctrl"><label><span>幹の太さ</span><b data-value="radius">0.74</b></label><input id="radius" type="range" min="0.4" max="1.25" step="0.02" value="0.74"></div>
+          <div class="ctrl"><label><span>樹冠の横広がり</span><b data-value="crownSpread">0.52</b></label><input id="crownSpread" type="range" min="0.42" max="0.88" step="0.01" value="0.52"></div>
+          <div class="ctrl accent-ctrl"><label><span>枝の方位均等化</span><b data-value="azimuthBalance">0.00</b></label><input id="azimuthBalance" type="range" min="0" max="1" step="0.05" value="0"></div>
+          <div class="ctrl"><label><span>葉の密度</span><b data-value="canopyDensity">1.00</b></label><input id="canopyDensity" type="range" min="0.25" max="2.50" step="0.05" value="1.00"></div>
+          <div class="ctrl"><label><span>内側の葉量</span><b data-value="innerFill">0.12</b></label><input id="innerFill" type="range" min="0" max="1" step="0.02" value="0.12"></div>
+          <div class="ctrl"><label><span>空の抜け</span><b data-value="skyGap">0.18</b></label><input id="skyGap" type="range" min="0" max="0.60" step="0.02" value="0.18"></div>
+        </div>
+      </details>
+
+      <details class="accordion inverse-lab" data-section="inverse" open>
+        <summary><span>空間充填（逆フラクタル実験）</span><small>Space Colonization</small></summary>
+        <div class="section-body">
+          <div class="inverse-note">先に「ここまで樹冠を埋めたい」という引力点を置き、枝が届いている場所と未到達の空間を比較する。</div>
+          <div class="toggle-grid">
+            <button id="targetPoints" type="button" aria-pressed="true">引力点を表示</button>
+            <button id="uncoveredOnly" type="button" aria-pressed="false">未到達だけ</button>
+          </div>
+          <div class="diagnostic-grid">
+            <div><span>枝の到達率</span><b id="targetCoverage">--</b></div>
+            <div><span>方位カバー</span><b id="azimuthCoverage">--</b></div>
+            <div><span>最大空白角</span><b id="maxAzimuthGap">--</b></div>
+          </div>
+          <div class="legend"><i class="dot covered"></i>到達済み <i class="dot uncovered"></i>未到達　橙矢印＝最大空白方向</div>
+        </div>
+      </details>
+
+      <details class="accordion" data-section="foliage">
+        <summary><span>葉の茂りプリセット</span><small>季節・密度</small></summary>
+        <div class="section-body">
+          <select id="foliagePreset" class="preset-select">
+            <option value="current">現行 / 疎</option>
+            <option value="winter">冬寄り</option>
+            <option value="summer">夏・標準</option>
+            <option value="dense">もさもさ上限</option>
+            <option value="custom">カスタム</option>
+          </select>
         </div>
       </details>
 
       <details class="accordion" data-section="advanced">
-        <summary><span>ADVANCED</span><small>seed</small></summary>
+        <summary><span>詳細設定</span><small>普段は閉じてOK</small></summary>
         <div class="section-body">
-          <div class="ctrl"><label><span>SEED</span><b data-value="seed">187</b></label><input id="seed" type="range" min="1" max="999" step="1" value="187"></div>
+          <div class="subgroup-label">幹・枝</div>
+          <div class="ctrl"><label><span>枝が始まる高さ</span><b data-value="trunkClear">0.18</b></label><input id="trunkClear" type="range" min="0.08" max="0.30" step="0.01" value="0.18"></div>
+          <div class="ctrl"><label><span>主枝の本数</span><b data-value="branches">7</b></label><input id="branches" type="range" min="3" max="14" step="1" value="7"></div>
+          <div class="ctrl"><label><span>主枝の開き角</span><b data-value="angle">68</b></label><input id="angle" type="range" min="40" max="88" step="1" value="68"></div>
+          <div class="ctrl"><label><span>一次枝のうねり</span><b data-value="gnarl1">0.095</b></label><input id="gnarl1" type="range" min="0.01" max="0.24" step="0.005" value="0.095"></div>
+          <div class="ctrl"><label><span>二次枝のうねり</span><b data-value="gnarl2">0.18</b></label><input id="gnarl2" type="range" min="0.02" max="0.34" step="0.005" value="0.18"></div>
+          <div class="ctrl"><label><span>枝先の上向き補正</span><b data-value="upPull">0.12</b></label><input id="upPull" type="range" min="0" max="0.38" step="0.01" value="0.12"></div>
+          <div class="ctrl"><label><span>根元の張り</span><b data-value="flare">0.82</b></label><input id="flare" type="range" min="0" max="1.5" step="0.02" value="0.82"></div>
+          <div class="ctrl"><label><span>枝元の膨らみ</span><b data-value="collar">0.24</b></label><input id="collar" type="range" min="0" max="0.65" step="0.01" value="0.24"></div>
+
+          <div class="subgroup-label">葉・樹冠</div>
+          <div class="ctrl"><label><span>葉群が枝を覆う長さ</span><b data-value="clumpSpan">0.72</b></label><input id="clumpSpan" type="range" min="0.20" max="0.96" step="0.02" value="0.72"></div>
+          <div class="ctrl"><label><span>葉のない枝の割合</span><b data-value="deadBranchFraction">0.04</b></label><input id="deadBranchFraction" type="range" min="0" max="0.40" step="0.01" value="0.04"></div>
+          <div class="ctrl"><label><span>下側樹冠の葉量</span><b data-value="lowerCrownFill">0.55</b></label><input id="lowerCrownFill" type="range" min="0" max="1" step="0.02" value="0.55"></div>
+          <div class="ctrl"><label><span>枝先あたりの葉数</span><b data-value="leafCount">9</b></label><input id="leafCount" type="range" min="2" max="18" step="1" value="9"></div>
+          <div class="ctrl"><label><span>葉の大きさ</span><b data-value="leafSize">0.48</b></label><input id="leafSize" type="range" min="0.2" max="0.9" step="0.02" value="0.48"></div>
+
+          <div class="subgroup-label">生成</div>
+          <div class="ctrl"><label><span>乱数シード</span><b data-value="seed">187</b></label><input id="seed" type="range" min="1" max="999" step="1" value="187"></div>
         </div>
       </details>
 
-      <section class="tool-block" aria-labelledby="displayLabel">
-        <div id="displayLabel" class="block-label">DISPLAY</div>
+      <section class="tool-block">
+        <div class="block-label">表示</div>
         <div class="toggle-grid" role="group" aria-label="表示モード">
-          <button id="silhouette" type="button" aria-pressed="false">SILHOUETTE</button>
-          <button id="wire" type="button" aria-pressed="false">WIREFRAME</button>
-          <button id="wood" type="button" aria-pressed="true">WOOD</button>
-          <button id="leaves" type="button" aria-pressed="true">LEAVES</button>
-          <button id="roots" type="button" aria-pressed="true">ROOTS</button>
+          <button id="silhouette" type="button" aria-pressed="false">シルエット</button>
+          <button id="wire" type="button" aria-pressed="false">ワイヤー</button>
+          <button id="wood" type="button" aria-pressed="true">枝・幹</button>
+          <button id="leaves" type="button" aria-pressed="true">葉</button>
+          <button id="roots" type="button" aria-pressed="true">根</button>
         </div>
       </section>
 
-      <section class="tool-block" aria-labelledby="presetLabel">
-        <div id="presetLabel" class="block-label">PRESET</div>
+      <section class="tool-block">
+        <div class="block-label">保存・比較</div>
         <div class="preset-grid">
-          <button id="reset" type="button">RESET</button>
-          <button id="random" type="button">RANDOM</button>
-          <button id="savePreset" type="button">SAVE</button>
-          <button id="loadPreset" type="button">LOAD</button>
-          <button id="copyPreset" type="button">COPY JSON</button>
+          <button id="reset" type="button">初期値</button>
+          <button id="random" type="button">別の個体</button>
+          <button id="savePreset" type="button">保存</button>
+          <button id="loadPreset" type="button">読込</button>
+          <button id="copyPreset" type="button">JSONコピー</button>
         </div>
       </section>
 
       <div class="shortcut-help">
-        <span><kbd>I</kbd> Inspector</span>
+        <span><kbd>I</kbd> 設定</span>
         <span><kbd>H</kbd> UI</span>
-        <span><kbd>1–4</kbd> View</span>
-        <span><kbd>W</kbd> Wire</span>
-        <span><kbd>S</kbd> Silhouette</span>
+        <span><kbd>1–4</kbd> 視点</span>
+        <span><kbd>A</kbd> 引力点</span>
+        <span><kbd>W</kbd> ワイヤー</span>
+        <span><kbd>S</kbd> シルエット</span>
       </div>
     </div>
   </section>
 
-  <button id="inspectorTab" class="inspector-tab" type="button" aria-label="Inspectorを表示" title="Inspectorを表示 (I)">
-    <span>OAK</span><b>›</b>
+  <button id="inspectorTab" class="inspector-tab" type="button" aria-label="設定を表示" title="設定を表示 (I)">
+    <span>設定</span><b>›</b>
   </button>
 
   <details id="statsPanel" class="stats">
-    <summary><span class="stats-label">PERF</span><span id="renderStats" class="ok">FPS --</span></summary>
+    <summary><span class="stats-label">性能</span><span id="renderStats" class="ok">FPS --</span></summary>
     <div class="stats-body"><span id="treeStats">--</span></div>
   </details>
 

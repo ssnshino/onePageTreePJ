@@ -33,6 +33,9 @@
     rootRadius:[.34,.48],
     junctionCollarScale:.24,
     junctionCollarLength:.18,
+    // 0 preserves the existing golden-angle scaffold. TREE LAB can raise this
+    // toward 1 to blend primary branches toward even 360-degree azimuth sectors.
+    azimuthBalance:0,
     foliage:{
       desktopLeavesPerTwig:9,
       mobileLeavesPerTwig:5,
