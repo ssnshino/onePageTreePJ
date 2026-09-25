@@ -95,8 +95,10 @@ let inspectorCollapsed=isMobile;
 let uiHidden=false;
 let currentView='three';
 let toastTimer=0;
+let growthPasses=0;
+let currentGrowthResult=null;
 
-const ids=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','azimuthBalance','gnarl1','gnarl2','upPull','canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize'];
+const ids=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','azimuthBalance','gnarl1','gnarl2','upPull','canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize','growthStep','growthTips'];
 const MORPHOLOGY_IDS=['seed','height','radius','trunkClear','flare','collar','branches','angle','crownSpread','azimuthBalance','gnarl1','gnarl2','upPull'];
 const FOLIAGE_IDS=['canopyDensity','innerFill','clumpSpan','deadBranchFraction','lowerCrownFill','skyGap','leafCount','leafSize'];
 const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
@@ -400,39 +402,10 @@ function rebuildAttractionPoints(skeleton){
   if(!treeGroup||!currentSpec)return;
 
   treeGroup.updateMatrixWorld(true);
-  const box=new THREE.Box3().setFromObject(treeGroup,true);
-  const size=box.getSize(new THREE.Vector3());
-  const targetHeight=Math.max(currentSpec.trunkLength,size.y*.92);
-  const rx=targetHeight*.87;
-  const rz=rx*.86;
-  const ry=targetHeight*.48;
-  const cy=Math.max(targetHeight*.53,box.min.y+targetHeight*.52);
-  const count=isMobile?260:440;
-  const rng=mulberry32(currentSpec.seed*9127+17);
-  const points=[];
-  let guard=0;
+  const cloud=currentGrowthResult?.cloud||createCrownTargetCloud(currentSpec,currentSpec.seed,isMobile?260:440);
+  const {points,targetHeight,rx,rz}=cloud;
 
-  while(points.length<count&&guard<count*12){
-    guard++;
-    const z=rng()*2-1;
-    const phi=rng()*Math.PI*2;
-    const s=Math.sqrt(Math.max(0,1-z*z));
-    const surfaceBiased=rng()<.68;
-    const radial=surfaceBiased?(.58+.42*Math.sqrt(rng())):Math.cbrt(rng())*.82;
-    const p=new THREE.Vector3(
-      Math.cos(phi)*s*radial*rx,
-      cy+z*radial*ry,
-      Math.sin(phi)*s*radial*rz
-    );
-    if(p.y<.45)continue;
-    points.push(p);
-  }
-
-  const branchSamples=[];
-  for(const stem of skeleton.stems){
-    if(stem.level===0)continue;
-    for(const ring of stem.rings)branchSamples.push(ring.pos);
-  }
+  const branchSamples=crownFillBranchSamples(skeleton);
   const coverageRadius=Math.max(.60,targetHeight*.075);
   const radiusSq=coverageRadius*coverageRadius;
   const covered=[],uncovered=[];
@@ -523,15 +496,21 @@ function rebuild(){
   }
 
   const skeleton=generateOldOakSkeleton(currentSpec,currentSpec.seed);
-  currentSkeleton=skeleton;
+  currentGrowthResult=runCrownFillPasses(
+    skeleton,currentSpec,currentSpec.seed,growthPasses,{
+      segmentLength:Number(el.growthStep.value),
+      maxTips:Number(el.growthTips.value)
+    }
+  );
+  currentSkeleton=currentGrowthResult.skeleton;
   const rootStems=buildOldOakSurfaceRootStems(currentSpec,currentSpec.seed,{x:0,y:0,z:0});
-  const woodGeometry=buildOldOakWoodGeometry(skeleton.stems,currentSpec);
+  const woodGeometry=buildOldOakWoodGeometry(currentSkeleton.stems,currentSpec);
   const rootGeometry=buildOldOakWoodGeometry(rootStems,currentSpec);
 
   treeGroup=new THREE.Group();
   woodMesh=new THREE.Mesh(woodGeometry,makeBarkMaterial());
   rootMesh=new THREE.Mesh(rootGeometry,makeBarkMaterial());
-  leafMesh=buildOldOakFoliage(skeleton,currentSpec,currentSpec.seed);
+  leafMesh=buildOldOakFoliage(currentSkeleton,currentSpec,currentSpec.seed);
 
   woodMesh.castShadow=woodMesh.receiveShadow=true;
   rootMesh.castShadow=rootMesh.receiveShadow=true;
@@ -540,8 +519,8 @@ function rebuild(){
 
   lastBuildMs=performance.now()-t0;
   treeGroup.userData.stats={
-    stems:skeleton.stems.length,
-    twigs:skeleton.terminalStems.length,
+    stems:currentSkeleton.stems.length,
+    twigs:currentSkeleton.terminalStems.length,
     leaves:leafMesh.count,
     terminalLeafGroups:leafMesh.userData.foliagePlan?.terminalGroups||0,
     innerLeafGroups:leafMesh.userData.foliagePlan?.innerGroups||0,
@@ -553,7 +532,10 @@ function rebuild(){
   applyMode();
   updateStaticStats();
   updateReferenceMetrics();
-  rebuildAttractionPoints(skeleton);
+  rebuildAttractionPoints(currentSkeleton);
+  document.getElementById('growthPassCount').textContent=`${growthPasses} PASS`;
+  document.getElementById('grownStemCount').textContent=String(currentGrowthResult?.grownStems.length||0);
+  document.getElementById('remainingTargetCount').textContent=String(currentGrowthResult?.activePoints.length??'--');
 }
 function updateStaticStats(){
   const s=treeGroup?.userData.stats;
@@ -612,6 +594,22 @@ document.getElementById('roots').addEventListener('click',()=>{rootsVisible=!roo
 document.getElementById('targetPoints').addEventListener('click',()=>{targetPointsVisible=!targetPointsVisible;applyTargetPointMode()});
 document.getElementById('uncoveredOnly').addEventListener('click',()=>{uncoveredOnly=!uncoveredOnly;applyTargetPointMode()});
 
+document.getElementById('growOne').addEventListener('click',()=>{
+  growthPasses=Math.min(12,growthPasses+1);
+  rebuild();
+  showToast('1パス成長しました');
+});
+document.getElementById('growThree').addEventListener('click',()=>{
+  growthPasses=Math.min(12,growthPasses+3);
+  rebuild();
+  showToast('3パス成長しました');
+});
+document.getElementById('growReset').addEventListener('click',()=>{
+  growthPasses=0;
+  rebuild();
+  showToast('補正成長を戻しました');
+});
+
 bedfordMatchViewBtn.addEventListener('click',()=>{
   setView('front');
   if(!silhouette){silhouette=true;applyMode()}
@@ -625,15 +623,18 @@ foliagePresetEl.addEventListener('change',()=>{
 
 morphologyPresetEl.addEventListener('change',()=>{
   if(morphologyPresetEl.value==='custom')return;
+  growthPasses=0;
   applyMorphologyPreset(morphologyPresetEl.value);
 });
 
 document.getElementById('random').addEventListener('click',()=>{
+  growthPasses=0;
   el.seed.value=1+Math.floor(Math.random()*999);
   syncLabels();persistValues();syncMorphologyPreset();syncFoliagePreset();rebuild();
   showToast('別の個体を生成しました');
 });
 document.getElementById('reset').addEventListener('click',()=>{
+  growthPasses=0;
   removeStored(STORAGE.values);
   applyValueState(defaultValues,{rebuildNow:true,persist:false});
   morphologyPresetEl.value='current';

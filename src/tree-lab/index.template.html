@@ -89,6 +89,20 @@
             <div><span>最大空白角</span><b id="maxAzimuthGap">--</b></div>
           </div>
           <div class="legend"><i class="dot covered"></i>到達済み <i class="dot uncovered"></i>未到達　橙矢印＝最大空白方向</div>
+
+          <div class="growth-divider"></div>
+          <div class="growth-title"><span>CROWN FILL PASS</span><b id="growthPassCount">0 PASS</b></div>
+          <div class="growth-actions">
+            <button id="growOne" type="button">1回育てる</button>
+            <button id="growThree" type="button">3回育てる</button>
+            <button id="growReset" type="button">成長を戻す</button>
+          </div>
+          <div class="ctrl"><label><span>1ステップの長さ</span><b data-value="growthStep">0.68</b></label><input id="growthStep" type="range" min="0.30" max="1.20" step="0.04" value="0.68"></div>
+          <div class="ctrl"><label><span>同時に育てる枝先数</span><b data-value="growthTips">10</b></label><input id="growthTips" type="range" min="2" max="24" step="1" value="10"></div>
+          <div class="growth-metrics">
+            <span>追加枝 <b id="grownStemCount">0</b></span>
+            <span>残り引力点 <b id="remainingTargetCount">--</b></span>
+          </div>
         </div>
       </details>
 

@@ -1,6 +1,6 @@
 # CURRENT SNAPSHOT
 
-Updated: 2026-09-25T00:28:00+09:00
+Updated: 2026-09-25T12:12:00+09:00
 
 ## Repository State
 
@@ -159,3 +159,31 @@ Important: the previous r160 local-safe Hero Tree candidate already booted succe
 - WOOD display toggle allows leaves-only review
 - GitHub Actions run `36020030281`: **PASS**
 - Human canopy-density review: PENDING
+
+## Active Experiment — Canopy Targets / UI v3 JA
+
+- Branch: `feature/tree-lab-canopy-targets-jp-ui`
+- Draft PR: `#11`
+- Space Colonization Phase 0 diagnostic
+- attraction points visualize desired crown space
+- green covered / orange-red uncovered
+- 12-sector branch azimuth coverage
+- maximum empty-angle diagnostic
+- azimuth-balance experiment
+- Japanese progressive-disclosure UI
+- primary visible controls reduced to seven
+- GitHub Actions run `36081698121`: **PASS**
+
+## Active Experiment — CROWN FILL PASS 01
+
+- Branch: `feature/tree-lab-crown-fill-pass-01`
+- Draft PR: `#12`
+- Base: `feature/tree-lab-canopy-targets-jp-ui`
+- TREE LAB-only corrective growth layer
+- existing OLD_OAK skeleton remains the base
+- attraction points drive terminal-tip extension
+- UI: 1 pass / 3 passes / reset
+- step length and simultaneous tip count tunable
+- production world does not bundle the experiment
+- GitHub Actions run `36089130633`: **PASS**
+- Human corrective-growth review: PENDING

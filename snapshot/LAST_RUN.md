@@ -1,6 +1,6 @@
 # LAST RUN
 
-Updated: 2026-09-25T00:28:00+09:00
+Updated: 2026-09-25T12:12:00+09:00
 
 ## Session Summary
 
@@ -234,3 +234,42 @@ CI:
 
 Next:
 Human A/B review of SUMMER and DENSE canopy settings against the Bedford Oak photo reference.
+
+## Current Run — Canopy Target Diagnostic
+
+Human review identified branch-space imbalance as the cause of the half-empty crown.
+
+Implemented:
+- crown attraction-point diagnostic
+- covered/uncovered target display
+- azimuth coverage and maximum empty angle
+- primary-branch azimuth balancing
+- Japanese progressive-disclosure UI
+
+CI:
+- run `36081698121`
+- PASS
+
+## Current Run — CROWN FILL PASS 01
+
+TREE LAB moved from diagnosing empty crown space to a first corrective-growth experiment.
+
+The normal OLD_OAK skeleton is generated first.
+Remaining attraction points are assigned to nearby terminal tips.
+Selected tips then extend short segments toward the average attraction direction while preserving strong tangent continuity and a turn-angle limit.
+
+The experiment is isolated in `src/tree-lab/crown-fill.js` and is not bundled into the production world.
+
+UI:
+- 1回育てる
+- 3回育てる
+- 成長を戻す
+- step length
+- simultaneous growth-tip count
+
+CI:
+- run `36089130633`
+- PASS
+
+Next:
+Human mobile/desktop visual review of 1-pass and 3-pass correction against uncovered attraction points.

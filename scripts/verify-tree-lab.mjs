@@ -11,6 +11,9 @@ ok(html.includes('JSONコピー'),'preset tools missing');
 ok(html.includes('空間充填（逆フラクタル実験）'),'space-colonization diagnostic missing');
 ok(html.includes('azimuthBalance'),'azimuth-balance control missing');
 ok(html.includes('targetCoverage'),'attraction-point coverage metric missing');
+ok(html.includes('CROWN FILL PASS'),'crown fill pass UI missing');
+ok(html.includes('growOne') && html.includes('growThree') && html.includes('growReset'),'growth action controls missing');
+ok(html.includes('1回育てる') && html.includes('3回育てる') && html.includes('成長を戻す'),'space-colonization growth runtime UI missing');
 const a=html.indexOf('<script>'),b=html.lastIndexOf('</script>');
 ok(a>=0&&b>a,'script bounds missing');
 if(a>=0&&b>a){try{new vm.Script(html.slice(a+8,b))}catch(e){fail.push('syntax '+e.message)}}
