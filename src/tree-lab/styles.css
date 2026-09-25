@@ -522,3 +522,18 @@ kbd{
 .subgroup-label:first-child{margin-top:0;border-top:0;padding-top:0}
 #targetPoints[aria-pressed="true"],#uncoveredOnly[aria-pressed="true"]{background:rgba(255,179,90,.14);border-color:rgba(255,179,90,.46);color:#ffe3bf}
 @media(max-width:700px){.diagnostic-grid b{font-size:12px}}
+
+/* CROWN FILL PASS controls */
+.growth-divider{height:1px;background:rgba(255,179,90,.22);margin:7px 0 8px}
+.growth-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.growth-title span{font-size:9px;font-weight:900;letter-spacing:.08em;color:#ffe0b7}
+.growth-title b{font-size:9px;color:var(--accent);font-variant-numeric:tabular-nums}
+.growth-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.growth-actions button{
+  min-height:38px;border:1px solid rgba(255,179,90,.34);border-radius:9px;
+  background:rgba(255,179,90,.08);color:#ffe4c2;font-size:8px;font-weight:850
+}
+.growth-actions button:active{background:rgba(255,179,90,.18)}
+.growth-metrics{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:8px}
+.growth-metrics b{color:var(--text);font-variant-numeric:tabular-nums}
+@media(max-width:700px){.growth-actions button{min-height:44px}}

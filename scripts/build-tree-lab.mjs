@@ -19,6 +19,7 @@ const fragments=[
   await read('src/js/55-old-oak-spec.js'),
   await read('src/js/56-old-oak-skeleton.js'),
   await read('src/js/57-old-oak-foliage.js'),
+  await read('src/tree-lab/crown-fill.js'),
   await read('src/tree-lab/app.js')
 ];
 
