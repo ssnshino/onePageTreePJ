@@ -4,6 +4,18 @@ Repository: `ssnshino/onePageTreePJ`
 
 Three.js / WebGL を使い、**一枚HTMLで実写に近いヴァーチャル3D空間をどこまで構築できるか**を研究するプロジェクト。
 
+## TREE LAB 実験版の公開・再開入口
+
+2026-10-10 JST。TREE LAB CROWN FILL実験版は[大飯店で公開済み](https://shinomiya-daihanten.wos.ktsys.jp/works/lab/programs/tree-lab-old-oak.html)。一覧未掲載の公開URLで、認証はありません。mainの安定baselineと、未mergeの[実験PR #12](https://github.com/ssnshino/onePageTreePJ/pull/12)は維持します。
+
+公開元は固定commit `17cd7dbfda7c776c03940c74fb98e5a9c1c7aa0c`。[CI run 36113107753](https://github.com/ssnshino/onePageTreePJ/actions/runs/36113107753)の成功artifact `one-page-html`（ID `10853843237`）に含まれる `tree-lab-old-oak.html` をそのまま配布しました。
+
+配布先は `ssnshino/shinomiya-daihanten-content` の `works/lab/programs/tree-lab-old-oak.html`。[content PR #27](https://github.com/ssnshino/shinomiya-daihanten-content/pull/27)をmergeし、[Deploy BASE content 38048526057](https://github.com/ssnshino/shinomiya-daihanten-content/actions/runs/38048526057)が成功。反映commitは `6e527a650ae29c3b9ef87d679ccca0e70fa46486` です。
+
+公開HTTP 200と元HTMLとのSHA-256一致を確認済み。1回成長・3回成長・リセットは本人確認済みです。クラウドブラウザのWebGLは無効で、エージェントによる描画・操作の合格とはしていません。
+
+再開時は固定sourceとPR #12、最新content PR／master／Actionsを確認してください。改修はsource側、配布は検証済みHTMLのcontent PR経由、承認済みmaster merge後は既存自動deployと公開内容を照合します。通常のBASE直接編集は不要です。
+
 ## CURRENT BASELINE
 
 - Version: `v0.5 TREES & ROCKS`
